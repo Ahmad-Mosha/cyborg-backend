@@ -5,7 +5,6 @@ import {
   Body,
   Param,
   UseGuards,
-  Request,
   Put,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -13,6 +12,8 @@ import { WorkoutsService } from './workouts.service';
 import { CreateRoutineDto } from './dto/create-routine.dto';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { CreateExerciseSetDto } from './dto/create-exercise-set.dto';
+import { GetUser } from '../auth/decorators/get-user.decorator';
+import { User } from '../users/entities/user.entity';
 
 @Controller('workouts')
 @UseGuards(JwtAuthGuard)
@@ -22,29 +23,29 @@ export class WorkoutsController {
   // Workout Routine Endpoints
   @Post('routines')
   async createRoutine(
-    @Request() req,
+    @GetUser() user: User,
     @Body() createRoutineDto: CreateRoutineDto,
   ) {
-    return await this.workoutsService.createRoutine(req.user, createRoutineDto);
+    return await this.workoutsService.createRoutine(user, createRoutineDto);
   }
 
   @Get('routines')
-  async getUserRoutines(@Request() req) {
-    return await this.workoutsService.getUserRoutines(req.user);
+  async getUserRoutines(@GetUser() user: User) {
+    return await this.workoutsService.getUserRoutines(user);
   }
 
   @Get('routines/:id')
-  async getRoutine(@Request() req, @Param('id') id: string) {
-    return await this.workoutsService.getRoutine(id, req.user);
+  async getRoutine(@GetUser() user: User, @Param('id') id: string) {
+    return await this.workoutsService.getRoutine(id, user);
   }
 
   // Workout Session Endpoints
   @Post('sessions')
   async createSession(
-    @Request() req,
+    @GetUser() user: User,
     @Body() createSessionDto: CreateSessionDto,
   ) {
-    return await this.workoutsService.createSession(req.user, createSessionDto);
+    return await this.workoutsService.createSession(user, createSessionDto);
   }
 
   @Post('sessions/:sessionId/exercises/:exerciseId/sets')
@@ -61,12 +62,12 @@ export class WorkoutsController {
   }
 
   @Put('sessions/:id/complete')
-  async completeSession(@Request() req, @Param('id') id: string) {
-    return await this.workoutsService.completeSession(id, req.user);
+  async completeSession(@GetUser() user: User, @Param('id') id: string) {
+    return await this.workoutsService.completeSession(id, user);
   }
 
   @Get('history')
-  async getWorkoutHistory(@Request() req) {
-    return await this.workoutsService.getUserWorkoutHistory(req.user);
+  async getWorkoutHistory(@GetUser() user: User) {
+    return await this.workoutsService.getUserWorkoutHistory(user);
   }
 }

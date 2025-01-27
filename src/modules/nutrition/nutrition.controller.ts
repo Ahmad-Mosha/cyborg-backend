@@ -6,9 +6,10 @@ import {
   Param,
   Delete,
   UseGuards,
-  Request,
   Query,
 } from '@nestjs/common';
+import { GetUser } from '../auth/decorators/get-user.decorator';
+import { User } from '../users/entities/user.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { NutritionService } from './nutrition.service';
 import { CreateFoodDto } from './dto/create-food.dto';
@@ -21,8 +22,11 @@ export class NutritionController {
 
   // Food Endpoints
   @Post('foods')
-  async createFood(@Request() req, @Body() createFoodDto: CreateFoodDto) {
-    return await this.nutritionService.createFood(req.user, createFoodDto);
+  async createFood(
+    @GetUser() user: User,
+    @Body() createFoodDto: CreateFoodDto,
+  ) {
+    return await this.nutritionService.createFood(user, createFoodDto);
   }
 
   @Get('foods/search')
@@ -37,31 +41,31 @@ export class NutritionController {
 
   // Meal Endpoints
   @Post('meals')
-  async createMeal(@Request() req, @Body() createMealDto: CreateMealDto) {
-    return await this.nutritionService.createMeal(req.user, createMealDto);
+  async createMeal(
+    @GetUser() user: User,
+    @Body() createMealDto: CreateMealDto,
+  ) {
+    return await this.nutritionService.createMeal(user, createMealDto);
   }
 
   @Get('meals')
   async getUserMeals(
-    @Request() req,
+    @GetUser() user: User,
     @Query('date') date: string = new Date().toISOString(),
   ) {
-    return await this.nutritionService.getUserMeals(req.user, new Date(date));
+    return await this.nutritionService.getUserMeals(user, new Date(date));
   }
 
   @Get('daily-nutrition')
   async getDailyNutrition(
-    @Request() req,
+    @GetUser() user: User,
     @Query('date') date: string = new Date().toISOString(),
   ) {
-    return await this.nutritionService.getDailyNutrition(
-      req.user,
-      new Date(date),
-    );
+    return await this.nutritionService.getDailyNutrition(user, new Date(date));
   }
 
   @Delete('meals/:id')
-  async deleteMeal(@Request() req, @Param('id') id: string) {
-    return await this.nutritionService.deleteMeal(req.user, id);
+  async deleteMeal(@GetUser() user: User, @Param('id') id: string) {
+    return await this.nutritionService.deleteMeal(user, id);
   }
 }
