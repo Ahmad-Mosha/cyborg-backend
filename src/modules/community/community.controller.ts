@@ -6,10 +6,11 @@ import {
   Param,
   Delete,
   UseGuards,
-  Request,
   Query,
   Put,
 } from '@nestjs/common';
+import { GetUser } from '../auth/decorators/get-user.decorator';
+import { User } from '../users/entities/user.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -25,8 +26,11 @@ export class CommunityController {
 
   // Post Endpoints
   @Post('posts')
-  async createPost(@Request() req, @Body() createPostDto: CreatePostDto) {
-    return await this.communityService.createPost(req.user, createPostDto);
+  async createPost(
+    @GetUser() user: User,
+    @Body() createPostDto: CreatePostDto,
+  ) {
+    return await this.communityService.createPost(user, createPostDto);
   }
 
   @Get('posts')
@@ -43,19 +47,19 @@ export class CommunityController {
   }
 
   @Delete('posts/:id')
-  async deletePost(@Request() req, @Param('id') id: string) {
-    return await this.communityService.deletePost(id, req.user);
+  async deletePost(@GetUser() user: User, @Param('id') id: string) {
+    return await this.communityService.deletePost(id, user);
   }
 
   // Comment Endpoints
   @Post('posts/:postId/comments')
   async createComment(
-    @Request() req,
+    @GetUser() user: User,
     @Param('postId') postId: string,
     @Body() createCommentDto: CreateCommentDto,
   ) {
     return await this.communityService.createComment(
-      req.user,
+      user,
       postId,
       createCommentDto,
     );
@@ -63,8 +67,8 @@ export class CommunityController {
 
   // Like Endpoints
   @Post('posts/:postId/like')
-  async toggleLike(@Request() req, @Param('postId') postId: string) {
-    return await this.communityService.toggleLike(req.user, postId);
+  async toggleLike(@GetUser() user: User, @Param('postId') postId: string) {
+    return await this.communityService.toggleLike(user, postId);
   }
 
   // Admin Endpoints
@@ -72,10 +76,10 @@ export class CommunityController {
   @UseGuards(RolesGuard)
   @Roles('admin')
   async moderatePost(
-    @Request() req,
+    @GetUser() user: User,
     @Param('id') id: string,
     @Body('status') status: PostStatus,
   ) {
-    return await this.communityService.moderatePost(req.user, id, status);
+    return await this.communityService.moderatePost(user, id, status);
   }
 }
