@@ -70,58 +70,31 @@ export class User {
   @Column({ type: 'float', nullable: true })
   dailyFatGoal: number;
 
-  @Column({ default: true })
-  workoutReminders: boolean;
-
-  @Column({ default: true })
-  mealReminders: boolean;
-
-  @Column({ default: true })
-  goalAlerts: boolean;
-
-  @Column({ default: true })
-  emailNotifications: boolean;
-
-  @Column('text', {
-    nullable: true,
-    transformer: {
-      to: (value: string[]) => (value ? JSON.stringify(value) : null),
-      from: (value: string) => (value ? JSON.parse(value) : []),
-    },
-  })
-  preferredNotificationDays: string[];
-
-  @Column({ type: 'time', nullable: true })
-  preferredNotificationTime: string;
-
   @OneToMany(() => WorkoutRoutine, (routine) => routine.creator)
   workoutRoutines: WorkoutRoutine[];
 
   @OneToMany(() => WorkoutSession, (session) => session.user)
   workoutSessions: WorkoutSession[];
 
-  @OneToMany(() => Post, (post) => post.author)
-  posts: Post[];
-
-  @OneToMany(() => Comment, (comment) => comment.author)
-  comments: Comment[];
-
-  @OneToMany(() => Like, (like) => like.user)
-  likes: Like[];
-
   @OneToMany(() => Meal, (meal) => meal.user)
   meals: Meal[];
-
-  @OneToMany(() => Notification, (notification) => notification.user)
-  notifications: Notification[];
 
   @Column('text', {
     default: JSON.stringify([ROLES.USER]),
     transformer: {
-      to: (value: UserRole[]) => JSON.stringify(value),
-      from: (value: string) => JSON.parse(value),
+      to: (value: UserRole[]) =>
+        Array.isArray(value) ? JSON.stringify(value) : JSON.stringify([value]),
+      from: (value: string) => {
+        if (!value) return [ROLES.USER];
+        try {
+          const parsed = JSON.parse(value);
+          return Array.isArray(parsed) ? parsed : [parsed];
+        } catch (e) {
+          return [value as UserRole];
+        }
+      },
     },
-  })
+  })  
   roles: UserRole[];
 
   @Column({ default: true })
@@ -140,4 +113,40 @@ export class User {
   isAdmin(): boolean {
     return this.hasRole(ROLES.ADMIN);
   }
+
+  // @Column({ default: true })
+  // workoutReminders: boolean;
+
+  // @Column({ default: true })
+  // mealReminders: boolean;
+
+  // @Column({ default: true })
+  // goalAlerts: boolean;
+
+  // @Column({ default: true })
+  // emailNotifications: boolean;
+
+  // @Column('text', {
+  //   nullable: true,
+  //   transformer: {
+  //     to: (value: string[]) => (value ? JSON.stringify(value) : null),
+  //     from: (value: string) => (value ? JSON.parse(value) : []),
+  //   },
+  // })
+  // preferredNotificationDays: string[];
+
+  // @Column({ type: 'time', nullable: true })
+  // preferredNotificationTime: string;
+
+  // @OneToMany(() => Post, (post) => post.author)
+  // posts: Post[];
+
+  // @OneToMany(() => Comment, (comment) => comment.author)
+  // comments: Comment[];
+
+  // @OneToMany(() => Like, (like) => like.user)
+  // likes: Like[];
+
+  // @OneToMany(() => Notification, (notification) => notification.user)
+  // notifications: Notification[];
 }

@@ -33,10 +33,6 @@ export class UpdateProfileDto {
   @IsOptional()
   gender?: string;
 
-  @IsDate()
-  @IsOptional()
-  dateOfBirth?: Date;
-
   @IsNumber()
   @IsOptional()
   @Min(0)
