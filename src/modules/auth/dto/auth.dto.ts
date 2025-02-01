@@ -25,8 +25,4 @@ export class RegisterDto extends LoginDto {
   @IsString()
   @IsNotEmpty()
   lastName: string;
-
-  @IsOptional()
-  @IsString()
-  gender?: string;
 }
