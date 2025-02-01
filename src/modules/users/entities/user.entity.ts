@@ -114,39 +114,39 @@ export class User {
     return this.hasRole(ROLES.ADMIN);
   }
 
-  // @Column({ default: true })
-  // workoutReminders: boolean;
+  @Column({ default: true })
+  workoutReminders: boolean;
 
-  // @Column({ default: true })
-  // mealReminders: boolean;
+  @Column({ default: true })
+  mealReminders: boolean;
 
-  // @Column({ default: true })
-  // goalAlerts: boolean;
+  @Column({ default: true })
+  goalAlerts: boolean;
 
-  // @Column({ default: true })
-  // emailNotifications: boolean;
+  @Column({ default: true })
+  emailNotifications: boolean;
 
-  // @Column('text', {
-  //   nullable: true,
-  //   transformer: {
-  //     to: (value: string[]) => (value ? JSON.stringify(value) : null),
-  //     from: (value: string) => (value ? JSON.parse(value) : []),
-  //   },
-  // })
-  // preferredNotificationDays: string[];
+  @Column('text', {
+    nullable: true,
+    transformer: {
+      to: (value: string[]) => (value ? JSON.stringify(value) : null),
+      from: (value: string) => (value ? JSON.parse(value) : []),
+    },
+  })
+  preferredNotificationDays: string[];
 
-  // @Column({ type: 'time', nullable: true })
-  // preferredNotificationTime: string;
+  @Column({ type: 'time', nullable: true })
+  preferredNotificationTime: string;
 
-  // @OneToMany(() => Post, (post) => post.author)
-  // posts: Post[];
+  @OneToMany(() => Post, (post) => post.author)
+  posts: Post[];
 
-  // @OneToMany(() => Comment, (comment) => comment.author)
-  // comments: Comment[];
+  @OneToMany(() => Comment, (comment) => comment.author)
+  comments: Comment[];
 
-  // @OneToMany(() => Like, (like) => like.user)
-  // likes: Like[];
+  @OneToMany(() => Like, (like) => like.user)
+  likes: Like[];
 
-  // @OneToMany(() => Notification, (notification) => notification.user)
-  // notifications: Notification[];
+  @OneToMany(() => Notification, (notification) => notification.user)
+  notifications: Notification[];
 }
