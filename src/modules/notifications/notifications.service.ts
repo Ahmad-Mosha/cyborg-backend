@@ -105,12 +105,12 @@ export class NotificationsService {
     await this.notificationRepository.remove(notification);
   }
 
-  async updateNotificationPreferences(
-    user: User,
-    updatePreferencesDto: UpdateNotificationPreferencesDto,
-  ): Promise<User> {
-    return await this.usersService.update(user.id, updatePreferencesDto);
-  }
+  // async updateNotificationPreferences(
+  //   user: User,
+  //   updatePreferencesDto: UpdateNotificationPreferencesDto,
+  // ): Promise<User> {
+  //   return await this.usersService.update(user.id, updatePreferencesDto);
+  // }
 
   // Scheduled notification methods
   async createWorkoutReminder(user: User, workoutDate: Date): Promise<void> {
