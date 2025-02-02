@@ -25,7 +25,7 @@ export class UsersController {
 
   @UseGuards(JwtAuthGuard)
   @Put('profile')
-  @ApiOperation({ summary: 'Update user profile' })
+  @ApiOperation({ summary: 'Update user profile, all fields are optional' })
   async updateProfile(
     @GetUser() user: User,
     @Body() updateProfileDto: UpdateProfileDto,

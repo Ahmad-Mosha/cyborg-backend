@@ -21,36 +21,46 @@ export class UpdateProfileDto {
   @IsString()
   @IsOptional()
   @ApiProperty({
-    description: "The user's first name",
+    description: "User's first name",
     example: 'John',
     required: false,
+    nullable: true,
+    type: String,
   })
   firstName?: string;
 
   @IsString()
   @IsOptional()
   @ApiProperty({
-    description: "The user's last name",
+    description: "User's last name",
     example: 'Doe',
     required: false,
+    nullable: true,
+    type: String,
   })
   lastName?: string;
 
   @IsEmail()
   @IsOptional()
   @ApiProperty({
-    description: "The user's email address",
+    description: "User's email address",
     example: 'john.doe@example.com',
     required: false,
+    nullable: true,
+    type: String,
+    format: 'email',
   })
   email?: string;
 
   @IsString()
   @IsOptional()
   @ApiProperty({
-    description: "The user's gender",
+    description: "User's gender",
     example: 'male',
     required: false,
+    nullable: true,
+    type: String,
+    enum: ['male', 'female', 'other'],
   })
   gender?: string;
 
@@ -58,10 +68,12 @@ export class UpdateProfileDto {
   @IsOptional()
   @Min(0)
   @ApiProperty({
-    description: "The user's weight in kilograms",
+    description: "User's weight in kilograms",
     example: 75.5,
     minimum: 0,
     required: false,
+    nullable: true,
+    type: Number,
   })
   weight?: number;
 
@@ -69,20 +81,24 @@ export class UpdateProfileDto {
   @IsOptional()
   @Min(0)
   @ApiProperty({
-    description: "The user's height in centimeters",
+    description: "User's height in centimeters",
     example: 180,
     minimum: 0,
     required: false,
+    nullable: true,
+    type: Number,
   })
   height?: number;
 
   @IsEnum(UserGoal)
   @IsOptional()
   @ApiProperty({
-    description: "The user's fitness goal",
+    description: "User's fitness goal",
     enum: UserGoal,
     example: UserGoal.WEIGHT_LOSS,
     required: false,
+    nullable: true,
+    enumName: 'UserGoal',
   })
   goal?: UserGoal;
 
@@ -91,11 +107,14 @@ export class UpdateProfileDto {
   @Min(1)
   @Max(7)
   @ApiProperty({
-    description: "The user's activity level on a scale of 1-7",
+    description:
+      "User's activity level on a scale of 1-7 (1: Sedentary, 7: Very active)",
     example: 4,
     minimum: 1,
     maximum: 7,
     required: false,
+    nullable: true,
+    type: Number,
   })
   activityLevel?: number;
 
@@ -105,6 +124,9 @@ export class UpdateProfileDto {
     description: "URL of the user's avatar image",
     example: 'https://example.com/avatars/user123.jpg',
     required: false,
+    nullable: true,
+    type: String,
+    format: 'uri',
   })
   avatarUrl?: string;
 }
