@@ -7,7 +7,11 @@ import { WorkoutsModule } from './modules/workouts/workouts.module';
 import { CommunityModule } from './modules/community/community.module';
 import { NutritionModule } from './modules/nutrition/nutrition.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+
+import { FoodModule } from './modules/food/food.module';
+
 import { ExercisesModule } from './modules/exercises/exercises.module';
+
 import { databaseConfig } from './config/database.config';
 
 @Module({
@@ -22,7 +26,11 @@ import { databaseConfig } from './config/database.config';
     CommunityModule,
     NutritionModule,
     NotificationsModule,
+
+    FoodModule
+
     ExercisesModule,
+
   ],
   controllers: [],
   providers: [],
