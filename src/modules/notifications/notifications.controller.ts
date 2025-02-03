@@ -57,16 +57,16 @@ export class NotificationsController {
     return await this.notificationsService.deleteNotification(user, id);
   }
 
-  @Put('preferences')
-  async updateNotificationPreferences(
-    @GetUser() user: User,
-    @Body() updatePreferencesDto: UpdateNotificationPreferencesDto,
-  ) {
-    return await this.notificationsService.updateNotificationPreferences(
-      user,
-      updatePreferencesDto,
-    );
-  }
+  // @Put('preferences')
+  // async updateNotificationPreferences(
+  //   @GetUser() user: User,
+  //   @Body() updatePreferencesDto: UpdateNotificationPreferencesDto,
+  // ) {
+  //   return await this.notificationsService.updateNotificationPreferences(
+  //     user,
+  //     updatePreferencesDto,
+  //   );
+  // }
 
   // Admin endpoints
   @Post('announcements')
