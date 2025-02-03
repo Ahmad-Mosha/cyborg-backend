@@ -26,9 +26,7 @@ import { databaseConfig } from './config/database.config';
     CommunityModule,
     NutritionModule,
     NotificationsModule,
-
-    FoodModule
-
+    FoodModule,
     ExercisesModule,
 
   ],
