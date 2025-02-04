@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { ROLES, UserRole } from '../../../shared/constants/roles.constant';
-import { UserHealth } from './user-health.entity';
+import { UserData } from './user-data.entity';
 
 @Entity('users')
 export class User {
@@ -29,8 +29,8 @@ export class User {
   @Column()
   lastName: string;
 
-  @OneToOne(() => UserHealth, (health) => health.user)
-  health: UserHealth;
+  @OneToOne(() => UserData, (health) => health.user)
+  health: UserData;
 
   // @OneToMany(() => WorkoutRoutine, (routine) => routine.creator)
   // workoutRoutines: WorkoutRoutine[];

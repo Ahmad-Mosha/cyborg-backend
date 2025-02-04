@@ -9,8 +9,8 @@ import {
 } from 'typeorm';
 import { User } from './user.entity';
 
-@Entity('user_health')
-export class UserHealth {
+@Entity('user_data')
+export class UserData {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
