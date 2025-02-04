@@ -19,7 +19,8 @@ export class AuthService {
   async validateUser(email: string, password: string): Promise<any> {
     const user = await this.usersService.findByEmail(email);
     if (user && (await bcrypt.compare(password, user.password))) {
-      const { password, ...result } = user;
+      // Return the complete user object except password
+      const { password: _, ...result } = user;
       return result;
     }
     return null;
@@ -31,13 +32,18 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Handle first login flag
-
     const payload = { email: user.email, sub: user.id, roles: user.roles };
-    return {
+    const response = {
       access_token: this.jwtService.sign(payload),
       user,
     };
+
+    // Update isFirstLogin flag after preparing the response
+    if (user.isFirstLogin) {
+      await this.usersService.update(user.id, { isFirstLogin: false });
+    }
+
+    return response;
   }
 
   async register(registerDto: RegisterDto) {
