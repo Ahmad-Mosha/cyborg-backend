@@ -1,64 +1,64 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToOne,
-  OneToMany,
-  CreateDateColumn,
-  UpdateDateColumn,
-} from 'typeorm';
-import { User } from '../../users/entities/user.entity';
-import { MealFood } from './meal-food.entity';
+// import {
+//   Entity,
+//   PrimaryGeneratedColumn,
+//   Column,
+//   ManyToOne,
+//   OneToMany,
+//   CreateDateColumn,
+//   UpdateDateColumn,
+// } from 'typeorm';
+// import { User } from '../../users/entities/user.entity';
+// import { MealFood } from './meal-food.entity';
 
-export enum MealType {
-  BREAKFAST = 'breakfast',
-  LUNCH = 'lunch',
-  DINNER = 'dinner',
-  SNACK = 'snack',
-}
+// export enum MealType {
+//   BREAKFAST = 'breakfast',
+//   LUNCH = 'lunch',
+//   DINNER = 'dinner',
+//   SNACK = 'snack',
+// }
 
-@Entity('meals')
-export class Meal {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+// @Entity('meals')
+// export class Meal {
+//   @PrimaryGeneratedColumn('uuid')
+//   id: string;
 
-  @Column()
-  name: string;
+//   @Column()
+//   name: string;
 
-  @Column({
-    type: 'simple-enum',
-    enum: MealType,
-    default: MealType.SNACK,
-  })
-  type: MealType;
+//   @Column({
+//     type: 'simple-enum',
+//     enum: MealType,
+//     default: MealType.SNACK,
+//   })
+//   type: MealType;
 
-  @Column({ type: 'datetime' })
-  consumedAt: Date;
+//   @Column({ type: 'datetime' })
+//   consumedAt: Date;
 
-  @ManyToOne(() => User, (user) => user.meals)
-  user: User;
+//   @ManyToOne(() => User, (user) => user.meals)
+//   user: User;
 
-  @OneToMany(() => MealFood, (mealFood) => mealFood.meal, { cascade: true })
-  mealFoods: MealFood[];
+//   @OneToMany(() => MealFood, (mealFood) => mealFood.meal, { cascade: true })
+//   mealFoods: MealFood[];
 
-  @Column({ type: 'float', default: 0 })
-  totalCalories: number;
+//   @Column({ type: 'float', default: 0 })
+//   totalCalories: number;
 
-  @Column({ type: 'float', default: 0 })
-  totalProtein: number;
+//   @Column({ type: 'float', default: 0 })
+//   totalProtein: number;
 
-  @Column({ type: 'float', default: 0 })
-  totalCarbs: number;
+//   @Column({ type: 'float', default: 0 })
+//   totalCarbs: number;
 
-  @Column({ type: 'float', default: 0 })
-  totalFat: number;
+//   @Column({ type: 'float', default: 0 })
+//   totalFat: number;
 
-  @Column({ nullable: true })
-  notes: string;
+//   @Column({ nullable: true })
+//   notes: string;
 
-  @CreateDateColumn()
-  createdAt: Date;
+//   @CreateDateColumn()
+//   createdAt: Date;
 
-  @UpdateDateColumn()
-  updatedAt: Date;
-}
+//   @UpdateDateColumn()
+//   updatedAt: Date;
+// }

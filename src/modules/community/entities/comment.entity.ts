@@ -1,40 +1,40 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToOne,
-  CreateDateColumn,
-  UpdateDateColumn,
-} from 'typeorm';
-import { User } from '../../users/entities/user.entity';
-import { Post } from './post.entity';
+// import {
+//   Entity,
+//   PrimaryGeneratedColumn,
+//   Column,
+//   ManyToOne,
+//   CreateDateColumn,
+//   UpdateDateColumn,
+// } from 'typeorm';
+// import { User } from '../../users/entities/user.entity';
+// import { Post } from './post.entity';
 
-@Entity('comments')
-export class Comment {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+// @Entity('comments')
+// export class Comment {
+//   @PrimaryGeneratedColumn('uuid')
+//   id: string;
 
-  @Column('text')
-  content: string;
+//   @Column('text')
+//   content: string;
 
-  @ManyToOne(() => User, (user) => user.comments)
-  author: User;
+//   @ManyToOne(() => User, (user) => user.comments)
+//   author: User;
 
-  @ManyToOne(() => Post, (post) => post.comments)
-  post: Post;
+//   @ManyToOne(() => Post, (post) => post.comments)
+//   post: Post;
 
-  @ManyToOne(() => Comment, { nullable: true })
-  parentComment: Comment;
+//   @ManyToOne(() => Comment, { nullable: true })
+//   parentComment: Comment;
 
-  @Column({ default: false })
-  isEdited: boolean;
+//   @Column({ default: false })
+//   isEdited: boolean;
 
-  @Column({ default: false })
-  isDeleted: boolean;
+//   @Column({ default: false })
+//   isDeleted: boolean;
 
-  @CreateDateColumn()
-  createdAt: Date;
+//   @CreateDateColumn()
+//   createdAt: Date;
 
-  @UpdateDateColumn()
-  updatedAt: Date;
-}
+//   @UpdateDateColumn()
+//   updatedAt: Date;
+// }
