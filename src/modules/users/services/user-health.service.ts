@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UpdateUserHealthDto } from '../dto/update-user-health.dto';
 import { UserData } from '../entities/user-data.entity';
+import { UserDataDto } from '../dto/user-data.dto';
 
 @Injectable()
 export class UserDataService {
@@ -26,14 +26,14 @@ export class UserDataService {
 
   async update(
     userId: string,
-    updateUserHealthDto: UpdateUserHealthDto,
+    userDataDto: UserDataDto ,
   ): Promise<UserData> {
     let userData = await this.findOne(userId);
     if (!userData) {
       userData = await this.create(userId);
     }
 
-    Object.assign(userData, updateUserHealthDto);
+    Object.assign(userData, userDataDto);
     return this.userHealthRepository.save(userData);
   }
 

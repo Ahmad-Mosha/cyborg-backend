@@ -6,10 +6,10 @@ import {
   ApiResponse,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { UpdateUserHealthDto } from '../dto/update-user-health.dto';
 import { UserDataService } from '../services/user-health.service';
 import { UserData } from '../entities/user-data.entity';
 import { GetUser } from '../../../shared/decorators/get-user.decorator';
+import { UserDataDto } from '../dto/user-data.dto';
 
 @Controller('user-data')
 @ApiTags('User Data')
@@ -38,9 +38,9 @@ export class UserDataController {
   })
   async updateUserHealth(
     @GetUser() user,
-    @Body() updateUserHealthDto: UpdateUserHealthDto,
+    @Body() userDataDto: UserDataDto,
   ): Promise<UserData> {
-    return this.userDataService.update(user.id, updateUserHealthDto);
+    return this.userDataService.update(user.id, userDataDto);
   }
 
   @Post()
@@ -52,8 +52,8 @@ export class UserDataController {
   })
   async createUserHealth(
     @GetUser() user,
-    @Body() updateUserHealthDto: UpdateUserHealthDto,
+    @Body() userDataDto: UserDataDto,
   ): Promise<UserData> {
-    return this.userDataService.update(user.id, updateUserHealthDto);
+    return this.userDataService.update(user.id, userDataDto);
   }
 }

@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNumber, IsString, IsOptional, Min, Max } from 'class-validator';
 
-export class UpdateUserHealthDto {
+export class UserDataDto {
   @IsNumber()
   @IsOptional()
   @Min(0)
@@ -133,55 +133,14 @@ export class UpdateUserHealthDto {
   })
   fitnessGoals?: string;
 
-  @IsNumber()
+  @IsString()
   @IsOptional()
-  @Min(0)
   @ApiProperty({
-    description: "User's daily calorie goal",
-    example: 2500,
-    minimum: 0,
+    description: "User's activity level",
+    example: 'Moderate',
     required: false,
     nullable: true,
-    type: Number,
+    type: String,
   })
-  dailyCalorieGoal?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
-  @ApiProperty({
-    description: "User's daily protein goal in grams",
-    example: 150,
-    minimum: 0,
-    required: false,
-    nullable: true,
-    type: Number,
-  })
-  dailyProteinGoal?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
-  @ApiProperty({
-    description: "User's daily carbohydrates goal in grams",
-    example: 300,
-    minimum: 0,
-    required: false,
-    nullable: true,
-    type: Number,
-  })
-  dailyCarbsGoal?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
-  @ApiProperty({
-    description: "User's daily fat goal in grams",
-    example: 70,
-    minimum: 0,
-    required: false,
-    nullable: true,
-    type: Number,
-  })
-  dailyFatGoal?: number;
+  activityLevel: string;
 }
