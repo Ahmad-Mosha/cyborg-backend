@@ -1,22 +1,22 @@
-import { IsString, IsEnum, IsOptional, IsArray } from 'class-validator';
-import { PostType } from '../entities/post.entity';
+// import { IsString, IsEnum, IsOptional, IsArray } from 'class-validator';
+// import { PostType } from '../entities/post.entity';
 
-export class CreatePostDto {
-  @IsString()
-  title: string;
+// export class CreatePostDto {
+//   @IsString()
+//   title: string;
 
-  @IsString()
-  content: string;
+//   @IsString()
+//   content: string;
 
-  @IsEnum(PostType)
-  @IsOptional()
-  type?: PostType;
+//   @IsEnum(PostType)
+//   @IsOptional()
+//   type?: PostType;
 
-  @IsArray()
-  @IsOptional()
-  tags?: string[];
+//   @IsArray()
+//   @IsOptional()
+//   tags?: string[];
 
-  @IsArray()
-  @IsOptional()
-  attachments?: string[];
-}
+//   @IsArray()
+//   @IsOptional()
+//   attachments?: string[];
+// }

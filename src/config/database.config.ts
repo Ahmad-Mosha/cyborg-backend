@@ -6,5 +6,4 @@ export const databaseConfig: TypeOrmModuleOptions = {
   database: path.join(__dirname, '../../', 'data', 'fitness-app.sqlite'),
   entities: [path.join(__dirname, '../**/*.entity{.ts,.js}')],
   synchronize: true, // Set to false in production
-  logging: true,
 };
