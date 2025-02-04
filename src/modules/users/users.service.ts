@@ -31,7 +31,8 @@ export class UsersService {
     return await this.userRepository.findOne({ where: { email } });
   }
 
-  async update(user: User, updateUserDto: Partial<User>): Promise<User> {
+  async update(id: string, updateUserDto: Partial<User>): Promise<User> {
+    const user = await this.findOne(id);
     Object.assign(user, updateUserDto);
     return await this.userRepository.save(user);
   }

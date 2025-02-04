@@ -17,19 +17,19 @@ import {
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Get('all')
-  @ApiOperation({ summary: 'Get all users' })
-  async findAll() {
-    return await this.usersService.findAll();
-  }
+  // @Get('all')
+  // @ApiOperation({ summary: 'Get all users' })
+  // async findAll() {
+  //   return await this.usersService.findAll();
+  // }
 
-  @UseGuards(JwtAuthGuard)
-  @Put('profile')
-  @ApiOperation({ summary: 'Update user profile, all fields are optional' })
-  async updateProfile(
-    @GetUser() user: User,
-    @Body() updateProfileDto: UpdateProfileDto,
-  ) {
-    return this.usersService.update(user, updateProfileDto);
-  }
+  // @UseGuards(JwtAuthGuard)
+  // @Put('profile')
+  // @ApiOperation({ summary: 'Update user profile, all fields are optional' })
+  // async updateProfile(
+  //   @GetUser() user: User,
+  //   @Body() updateProfileDto: UpdateProfileDto,
+  // ) {
+  //   return this.usersService.update(user, updateProfileDto);
+  // }
 }
