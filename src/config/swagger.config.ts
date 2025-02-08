@@ -10,12 +10,15 @@ export function setupSwagger(app: INestApplication) {
     .setVersion('1.0')
     .addBearerAuth()
     .addTag('Auth', 'Authentication endpoints for user registration and login')
-    .addTag('Users', 'User profile management and settings')
-    .addTag('Exercises', 'Exercise library and management')
+    .addTag('User Profile', 'User profile management and personal information')
+    .addTag('User Data', 'User health and fitness data management')
+    .addTag('Exercises', 'Exercise library and workout components')
     .addTag('Workouts', 'Workout routines and session tracking')
-    .addTag('Nutrition', 'Food tracking and meal planning')
+    .addTag('Food', 'Food database and nutritional information')
+    .addTag('Nutrition', 'Meal tracking and nutrition planning')
+    .addTag('AI Chat', 'AI-powered fitness coaching and conversation')
     .addTag('Community', 'Social features and community interaction')
-    .addTag('Notifications', 'User notification preferences and management')
+    .addTag('Notifications', 'User notification management')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
@@ -36,35 +39,59 @@ export function setupSwagger(app: INestApplication) {
       }
       .swagger-ui .opblock-tag:hover { transform: translateX(5px) }
       .swagger-ui .opblock-tag[data-tag="Auth"] { border-color: #4CAF50 }
-      .swagger-ui .opblock-tag[data-tag="Users"] { border-color: #2196F3 }
+      .swagger-ui .opblock-tag[data-tag="User Profile"] { border-color: #2196F3 }
+      .swagger-ui .opblock-tag[data-tag="User Data"] { border-color: #673AB7 }
       .swagger-ui .opblock-tag[data-tag="Exercises"] { border-color: #FF9800 }
       .swagger-ui .opblock-tag[data-tag="Workouts"] { border-color: #E91E63 }
+      .swagger-ui .opblock-tag[data-tag="Food"] { border-color: #3F51B5 }
       .swagger-ui .opblock-tag[data-tag="Nutrition"] { border-color: #9C27B0 }
-      .swagger-ui .opblock-tag[data-tag="Community"] { border-color: #00BCD4 }
+      .swagger-ui .opblock-tag[data-tag="AI Chat"] { border-color: #00BCD4 }
+      .swagger-ui .opblock-tag[data-tag="Community"] { border-color: #009688 }
       .swagger-ui .opblock-tag[data-tag="Notifications"] { border-color: #795548 }
-      .swagger-ui .opblock-tag-section { position: relative }
-      .swagger-ui .opblock-tag-section:not(:last-child):after {
-        content: "";
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, #e0e0e0, transparent);
-      }
+      
+      .swagger-ui .opblock { margin: 0 0 15px }
+      .swagger-ui .opblock .opblock-summary { padding: 8px }
+      .swagger-ui .opblock .opblock-summary-description { font-size: 13px }
+      .swagger-ui .parameters-col_description { width: 35% }
+      .swagger-ui .parameters-col_name { width: 20% }
+      .swagger-ui table tbody tr td { padding: 10px 0 }
+      .swagger-ui .prop-format { color: #999 }
+      
+      .swagger-ui .response-col_status { width: 100px }
+      .swagger-ui .response-col_description { width: auto }
+      .swagger-ui .model-box { padding: 10px }
+      .swagger-ui section.models { margin: 30px 0 }
+      .swagger-ui section.models.is-open h4 { margin: 0 0 10px }
+      .swagger-ui .model-title { font-size: 16px }
     `,
-    customJs: [
-      'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui-themes/3.0.0/themes/3.x/theme-material.css',
-    ],
     swaggerOptions: {
       persistAuthorization: true,
-      docExpansion: 'none',
-      filter: true,
-      showRequestDuration: true,
       defaultModelsExpandDepth: 3,
       defaultModelExpandDepth: 3,
       displayRequestDuration: true,
-      tryItOutEnabled: true,
+      docExpansion: 'none',
+      filter: true,
+      showCommonExtensions: true,
+      showExtensions: true,
+      tagsSorter: 'alpha',
+      operationsSorter: (a, b) => {
+        const methodsOrder = [
+          'get',
+          'post',
+          'put',
+          'delete',
+          'patch',
+          'options',
+          'trace',
+        ];
+        const compare =
+          methodsOrder.indexOf(a.get('method')) -
+          methodsOrder.indexOf(b.get('method'));
+        if (compare === 0) {
+          return a.get('path').localeCompare(b.get('path'));
+        }
+        return compare;
+      },
     },
   });
 }
