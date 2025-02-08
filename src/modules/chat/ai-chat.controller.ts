@@ -11,8 +11,10 @@ import {
 import { AiChatService } from './services/ai-chat.service';
 import { GetUser } from '@shared/decorators/get-user.decorator';
 import { User } from '@modules/users/entities/user.entity';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('ai-chat')
+@ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 export class AiChatController {
   constructor(private readonly aiChatService: AiChatService) {}

@@ -8,17 +8,7 @@ export function setupSwagger(app: INestApplication) {
       'The comprehensive API documentation for the Fitness Application. This API provides endpoints for managing workouts, nutrition, user profiles, and community features.',
     )
     .setVersion('1.0')
-    .addBearerAuth(
-      {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-        name: 'JWT',
-        description: 'Enter JWT token',
-        in: 'header',
-      },
-      'JWT-auth',
-    )
+    .addBearerAuth()
     .addTag('Auth', 'Authentication endpoints for user registration and login')
     .addTag('Users', 'User profile management and settings')
     .addTag('Exercises', 'Exercise library and management')
