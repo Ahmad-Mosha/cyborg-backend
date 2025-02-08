@@ -10,6 +10,7 @@ import {
 import { Exclude } from 'class-transformer';
 import { ROLES, UserRole } from '../../../shared/constants/roles.constant';
 import { UserData } from './user-data.entity';
+import { ChatConversation } from '../../chat/entities/chat-conversation.entity';
 
 @Entity('users')
 export class User {
@@ -40,6 +41,9 @@ export class User {
 
   // @OneToMany(() => Meal, (meal) => meal.user)
   // meals: Meal[];
+
+  @OneToMany(() => ChatConversation, (conversation) => conversation.user)
+  chatConversations: ChatConversation[];
 
   @Column('text', {
     default: JSON.stringify([ROLES.USER]),
