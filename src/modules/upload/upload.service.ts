@@ -8,8 +8,8 @@ export class UploadService {
   getFileInfo(key: string) {
     throw new Error('Method not implemented.');
   }
-  private s3Client: S3Client;
-  private bucket: string;
+  private readonly s3Client: S3Client;
+  private readonly bucket: string;
 
   constructor() {
     this.s3Client = new S3Client({
