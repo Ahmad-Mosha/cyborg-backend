@@ -25,4 +25,7 @@ export class Exercise {
 
   @Column('simple-array')
   instructions: string[];
+
+  @Column({ default: false })
+  isCustom: boolean;
 }
