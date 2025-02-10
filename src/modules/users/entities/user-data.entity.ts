@@ -50,6 +50,21 @@ export class UserData {
   @Column({ type: 'float', nullable: true })
   bmi: number;
 
+  @Column({ type: 'text', nullable: true })
+  workoutLocation: string; 
+
+  @Column('text', { nullable: true })
+  additionalNotes: string; 
+
+  @Column('text', {
+    nullable: true,
+    transformer: {
+      to: (value: string[]) => (value ? JSON.stringify(value) : null),
+      from: (value: string) => (value ? JSON.parse(value) : []),
+    },
+  })
+  availableEquipment: string[];
+  
   @Column({ nullable: true })
   fitnessGoals: string;
 
