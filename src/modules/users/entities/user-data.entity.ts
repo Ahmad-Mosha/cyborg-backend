@@ -9,20 +9,25 @@ import {
 } from 'typeorm';
 import { User } from './user.entity';
 
+export enum Gender {
+  MALE = 'male',
+  FEMALE = 'female',
+}
+
 @Entity('user_data')
 export class UserData {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @OneToOne(() => User)
+  @OneToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn()
   user: User;
 
   @Column({ type: 'int', nullable: true })
   age: number;
 
-  @Column({ nullable: true })
-  gender: string;
+  @Column({ type: 'text', nullable: true })
+  gender: Gender;
 
   @Column({ type: 'float', nullable: true })
   weight: number;
@@ -45,9 +50,24 @@ export class UserData {
   @Column({ type: 'float', nullable: true })
   bmi: number;
 
+  @Column({ type: 'text', nullable: true })
+  workoutLocation: string; 
+
+  @Column('text', { nullable: true })
+  additionalNotes: string; 
+
+  @Column('text', {
+    nullable: true,
+    transformer: {
+      to: (value: string[]) => (value ? JSON.stringify(value) : null),
+      from: (value: string) => (value ? JSON.parse(value) : []),
+    },
+  })
+  availableEquipment: string[];
+  
   @Column({ nullable: true })
   fitnessGoals: string;
-  
+
   @Column({ nullable: true })
   activityLevel: string;
 
