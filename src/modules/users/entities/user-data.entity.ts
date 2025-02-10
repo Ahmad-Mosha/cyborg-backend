@@ -9,6 +9,11 @@ import {
 } from 'typeorm';
 import { User } from './user.entity';
 
+export enum Gender {
+  MALE = 'male',
+  FEMALE = 'female',
+}
+
 @Entity('user_data')
 export class UserData {
   @PrimaryGeneratedColumn('uuid')
@@ -21,8 +26,8 @@ export class UserData {
   @Column({ type: 'int', nullable: true })
   age: number;
 
-  @Column({ nullable: true })
-  gender: string;
+  @Column({ type: 'text', nullable: true })
+  gender: Gender;
 
   @Column({ type: 'float', nullable: true })
   weight: number;
