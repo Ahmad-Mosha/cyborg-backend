@@ -51,10 +51,10 @@ export class UserData {
   bmi: number;
 
   @Column({ type: 'text', nullable: true })
-  workoutLocation: string; 
+  workoutLocation: string;
 
   @Column('text', { nullable: true })
-  additionalNotes: string; 
+  additionalNotes: string;
 
   @Column('text', {
     nullable: true,
@@ -64,12 +64,15 @@ export class UserData {
     },
   })
   availableEquipment: string[];
-  
+
   @Column({ nullable: true })
   fitnessGoals: string;
 
   @Column({ nullable: true })
   activityLevel: string;
+
+  @Column({ nullable: true })
+  nationality: string;
 
   @CreateDateColumn()
   createdAt: Date;

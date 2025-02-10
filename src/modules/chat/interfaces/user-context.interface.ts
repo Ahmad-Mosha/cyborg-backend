@@ -12,6 +12,7 @@ export interface UserHealthContext {
   workoutLocation?: string;
   additionalNotes?: string;
   availableEquipment?: string[];
+  nationality?: string;
 }
 
 export interface UserContext {

@@ -29,6 +29,7 @@ export class ChatContextService {
       workoutLocation: health.workoutLocation,
       additionalNotes: health.additionalNotes,
       availableEquipment: health.availableEquipment,
+      nationality: health.nationality,
     };
   }
 
@@ -57,6 +58,7 @@ export class ChatContextService {
     - Workout location: ${context.health.workoutLocation || 'Not specified'}
     - Additional notes: ${context.health.additionalNotes || 'None'}
     - Available equipment: ${context.health.availableEquipment?.length ? context.health.availableEquipment.join(', ') : 'None'}
+    - Nationality: ${context.health.nationality || 'Not provided'}
     `;
   }
 }
