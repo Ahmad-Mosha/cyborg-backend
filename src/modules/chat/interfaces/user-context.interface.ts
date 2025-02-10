@@ -9,6 +9,9 @@ export interface UserHealthContext {
   bmi?: number;
   fitnessGoals?: string;
   activityLevel?: string;
+  workoutLocation?: string;
+  additionalNotes?: string;
+  availableEquipment?: string[];
 }
 
 export interface UserContext {
