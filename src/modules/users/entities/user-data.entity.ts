@@ -14,7 +14,7 @@ export class UserData {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @OneToOne(() => User)
+  @OneToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn()
   user: User;
 
@@ -47,7 +47,7 @@ export class UserData {
 
   @Column({ nullable: true })
   fitnessGoals: string;
-  
+
   @Column({ nullable: true })
   activityLevel: string;
 
