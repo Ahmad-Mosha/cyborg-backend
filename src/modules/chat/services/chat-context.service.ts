@@ -26,6 +26,10 @@ export class ChatContextService {
       bmi: this.calculateBMI(health.weight, health.height),
       fitnessGoals: health.fitnessGoals,
       activityLevel: health.activityLevel,
+      workoutLocation: health.workoutLocation,
+      additionalNotes: health.additionalNotes,
+      availableEquipment: health.availableEquipment,
+      nationality: health.nationality,
     };
   }
 
@@ -50,6 +54,11 @@ export class ChatContextService {
       * Muscle mass: ${context.health.muscleMass ? `${context.health.muscleMass}kg` : 'Not provided'}
       * Water: ${context.health.waterPercentage ? `${context.health.waterPercentage}%` : 'Not provided'}
     - Goals: ${context.health.fitnessGoals || 'Not specified'}
-    - Activity level: ${context.health.activityLevel || 'Not specified'}`;
+    - Activity level: ${context.health.activityLevel || 'Not specified'}
+    - Workout location: ${context.health.workoutLocation || 'Not specified'}
+    - Additional notes: ${context.health.additionalNotes || 'None'}
+    - Available equipment: ${context.health.availableEquipment?.length ? context.health.availableEquipment.join(', ') : 'None'}
+    - Nationality: ${context.health.nationality || 'Not provided'}
+    `;
   }
 }

@@ -186,4 +186,15 @@ export class UserDataDto {
     type: [String],
   })
   availableEquipment?: string[];
+
+  @IsString()
+  @IsOptional()
+  @ApiProperty({
+    description: 'Nationality of the user',
+    example: 'American',
+    required: false,
+    nullable: true,
+    type: String,
+  })
+  nationality?: string;
 }
