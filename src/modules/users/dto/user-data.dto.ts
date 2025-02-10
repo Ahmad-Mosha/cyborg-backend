@@ -1,5 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsString, IsOptional, Min, Max } from 'class-validator';
+import {
+  IsNumber,
+  IsString,
+  IsOptional,
+  Min,
+  Max,
+  IsArray,
+  IsIn,
+} from 'class-validator';
 
 export class UserDataDto {
   @IsNumber()
@@ -142,5 +150,40 @@ export class UserDataDto {
     nullable: true,
     type: String,
   })
-  activityLevel: string;
+  activityLevel?: string;
+
+  @IsString()
+  @IsOptional()
+  @IsIn(['gym', 'home'])
+  @ApiProperty({
+    description: "User's preferred workout location",
+    example: 'gym',
+    required: false,
+    nullable: true,
+    enum: ['gym', 'home'],
+  })
+  workoutLocation?: string;
+
+  @IsString()
+  @IsOptional()
+  @ApiProperty({
+    description:
+      'Additional notes about health conditions, injuries, or preferences',
+    example: 'I have a knee injury and prefer a low-impact workout.',
+    required: false,
+    nullable: true,
+    type: String,
+  })
+  additionalNotes?: string;
+
+  @IsArray()
+  @IsOptional()
+  @ApiProperty({
+    description: 'List of available workout equipment at home',
+    example: ['dumbbells', 'resistance bands', 'pull-up bar'],
+    required: false,
+    nullable: true,
+    type: [String],
+  })
+  availableEquipment?: string[];
 }
