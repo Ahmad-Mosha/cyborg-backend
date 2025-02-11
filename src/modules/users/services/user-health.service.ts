@@ -33,11 +33,11 @@ export class UserDataService {
 
     // Transform the DTO to get calculated values
     const transformedDto = plainToInstance(UserDataDto, userDataDto);
-    
+
     Object.assign(userData, {
       ...userDataDto,
       bmi: transformedDto.bmi,
-      bmr: transformedDto.bmr
+      bmr: transformedDto.bmr,
     });
 
     return this.userHealthRepository.save(userData);
