@@ -7,7 +7,10 @@ import {
   Max,
   IsArray,
   IsIn,
+  IsEnum,
 } from 'class-validator';
+import { Expose, Transform } from 'class-transformer';
+import { Gender } from '../entities/user-data.entity';
 
 export class UserDataDto {
   @IsNumber()
@@ -23,17 +26,16 @@ export class UserDataDto {
   })
   age?: number;
 
-  @IsString()
+  @IsEnum(Gender)
   @IsOptional()
   @ApiProperty({
     description: "User's gender",
     example: 'male',
     required: false,
     nullable: true,
-    type: String,
-    enum: ['male', 'female'],
+    enum: Gender,
   })
-  gender?: string;
+  gender?: Gender;
 
   @IsNumber()
   @IsOptional()
@@ -60,6 +62,46 @@ export class UserDataDto {
     type: Number,
   })
   height?: number;
+
+  @Expose()
+  @Transform(({ obj }) => {
+    if (!obj.weight || !obj.height) return null;
+    return Number((obj.weight / Math.pow(obj.height / 100, 2)).toFixed(1));
+  })
+  @ApiProperty({
+    description: "User's Body Mass Index (BMI)",
+    example: 24.5,
+    minimum: 0,
+    required: false,
+    nullable: true,
+    type: Number,
+  })
+  bmi?: number;
+
+  @Expose()
+  @Transform(({ obj }) => {
+    if (!obj.weight || !obj.height || !obj.age || !obj.gender) return null;
+    
+    // Using Mifflin-St Jeor Formula
+    let bmr = 10 * obj.weight + 6.25 * obj.height - 5 * obj.age;
+    
+    if (obj.gender === Gender.MALE) {
+      bmr += 5;
+    } else {
+      bmr -= 161;
+    }
+    
+    return Math.round(bmr);
+  })
+  @ApiProperty({
+    description: "User's Basal Metabolic Rate (BMR) in calories",
+    example: 1800,
+    minimum: 0,
+    required: false,
+    nullable: true,
+    type: Number,
+  })
+  bmr?: number;
 
   @IsNumber()
   @IsOptional()
@@ -103,32 +145,6 @@ export class UserDataDto {
     type: Number,
   })
   waterPercentage?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
-  @ApiProperty({
-    description: "User's Basal Metabolic Rate (BMR) in calories",
-    example: 1800,
-    minimum: 0,
-    required: false,
-    nullable: true,
-    type: Number,
-  })
-  bmr?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
-  @ApiProperty({
-    description: "User's Body Mass Index (BMI)",
-    example: 24.5,
-    minimum: 0,
-    required: false,
-    nullable: true,
-    type: Number,
-  })
-  bmi?: number;
 
   @IsString()
   @IsOptional()
