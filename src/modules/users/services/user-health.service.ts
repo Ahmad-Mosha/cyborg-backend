@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserData } from '../entities/user-data.entity';
 import { UserDataDto } from '../dto/user-data.dto';
+import { plainToInstance } from 'class-transformer';
 
 @Injectable()
 export class UserDataService {
@@ -24,16 +25,21 @@ export class UserDataService {
     return this.userHealthRepository.save(userData);
   }
 
-  async update(
-    userId: string,
-    userDataDto: UserDataDto ,
-  ): Promise<UserData> {
+  async update(userId: string, userDataDto: UserDataDto): Promise<UserData> {
     let userData = await this.findOne(userId);
     if (!userData) {
       userData = await this.create(userId);
     }
 
-    Object.assign(userData, userDataDto);
+    // Transform the DTO to get calculated values
+    const transformedDto = plainToInstance(UserDataDto, userDataDto);
+    
+    Object.assign(userData, {
+      ...userDataDto,
+      bmi: transformedDto.bmi,
+      bmr: transformedDto.bmr
+    });
+
     return this.userHealthRepository.save(userData);
   }
 
