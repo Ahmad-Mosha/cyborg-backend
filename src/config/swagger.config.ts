@@ -19,6 +19,7 @@ export function setupSwagger(app: INestApplication) {
     .addTag('AI Chat', 'AI-powered fitness coaching and conversation')
     .addTag('Community', 'Social features and community interaction')
     .addTag('Notifications', 'User notification management')
+    .addTag('Recipes', 'Recipe search and nutrition information')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
@@ -48,6 +49,7 @@ export function setupSwagger(app: INestApplication) {
       .swagger-ui .opblock-tag[data-tag="AI Chat"] { border-color: #00BCD4 }
       .swagger-ui .opblock-tag[data-tag="Community"] { border-color: #009688 }
       .swagger-ui .opblock-tag[data-tag="Notifications"] { border-color: #795548 }
+      .swagger-ui .opblock-tag[data-tag="Recipes"] { border-color: #FF5722 }
       
       .swagger-ui .opblock { margin: 0 0 15px }
       .swagger-ui .opblock .opblock-summary { padding: 8px }
