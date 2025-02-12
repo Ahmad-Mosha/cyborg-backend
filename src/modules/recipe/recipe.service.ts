@@ -1,7 +1,7 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException} from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
-import { SearchRecipeDto, RecipeAnalysisDto } from './dto/recipe.dto';
+import { SearchRecipeDto, IngredientSearchDto } from './dto/recipe.dto';
 import { Recipe } from './interfaces/recipe.interface';
 import { catchError, map } from 'rxjs/operators';
 import { lastValueFrom, throwError } from 'rxjs';
@@ -70,48 +70,53 @@ export class RecipeService {
       throw new BadRequestException(error.message);
     }
   }
-/**
- * 
- * @param analysisDto  title and ingredient list of the recipe
- * @returns  analysis of the recipe
- * @throws BadRequestException if the request fails
- * bt3mel id = -1 fe moshkla feha 
- * @returns 
- */
-  async analyzeRecipe(analysisDto: RecipeAnalysisDto) {
-  const params = { apiKey: this.apiKey };
 
-  console.log('Sending request with data:', analysisDto);   
+  async searchIngredients(searchDto: IngredientSearchDto) {
+    const params = {
+      apiKey: this.apiKey,
+      query: searchDto.query,
+      number: searchDto.number || 10,
+    };
 
-  try {
-    return await lastValueFrom(
-      this.httpService.post(`${this.baseUrl}/recipes/analyze`, {
-        title: analysisDto.title, 
-        ingredientList: analysisDto.ingredientList,
-        includeNutrition: true,
-      }, { params }).pipe(
-        map(res => res.data),
-        catchError(error => {
-          console.error('API Error:', error.response?.data || error.message);
-          return throwError(() => new BadRequestException('Failed to analyze recipe'));
-        })
-      )
-    );
-  } catch (error) {
-    throw new BadRequestException(error.message);
+    try {
+      return await lastValueFrom(
+        this.httpService.get(`${this.baseUrl}/food/ingredients/search`, { params }).pipe(
+          map(res => res.data),
+          catchError(error => {
+            console.error(error);
+            return throwError(() => new BadRequestException('Failed to search ingredients'));
+          })
+        )
+      );
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
   }
-}
 
+  
+  async getRecipeNutrition(id: number) {
+    const params = {
+      apiKey: this.apiKey,
+    };
+
+    try {
+      return await lastValueFrom(
+        this.httpService.get(`${this.baseUrl}/recipes/${id}/nutritionWidget.json`, { params }).pipe(
+          map(res => res.data),
+          catchError(error => {
+            console.error(error);
+            return throwError(() => new BadRequestException(`Failed to fetch nutrition information for recipe ${id}`));
+          })
+        )
+      );
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
 
   //async getRandomRecipes(tags?: string[]) {
   //const params = {
   //  apiKey: this.apiKey,
-  //  number: 10,
-  //  tags: tags && tags.length > 0 ? tags.join(',') : undefined, 
-  //};
-
-  //console.log('Sending request with params:', params); 
-
   //try {
   //  return await lastValueFrom(
   //   this.httpService.get(`${this.baseUrl}/recipes/random`, { params }).pipe(
@@ -127,11 +132,7 @@ export class RecipeService {
   //}
 //}
 
-/**
- * 
- * @param id id of the recipe
- * @returns  similar recipes to the recipe with the given id
- */
+
   async getSimilarRecipes(id: number) {
     const params = {
       apiKey: this.apiKey,
@@ -145,6 +146,27 @@ export class RecipeService {
           catchError(error => {
             console.error(error);
             return throwError(() => new BadRequestException(`Failed to fetch similar recipes for id ${id}`));
+          })
+        )
+      );
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  async getAnalyzedInstructions(id: number, stepBreakdown: boolean = false) {
+    const params = {
+      apiKey: this.apiKey,
+      stepBreakdown: stepBreakdown,
+    };
+
+    try {
+      return await lastValueFrom(
+        this.httpService.get(`${this.baseUrl}/recipes/${id}/analyzedInstructions`, { params }).pipe(
+          map(res => res.data),
+          catchError(error => {
+            console.error('API Error:', error.response?.data || error.message);
+            return throwError(() => new BadRequestException(`Failed to fetch recipe instructions for id ${id}`));
           })
         )
       );
