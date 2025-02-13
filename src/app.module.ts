@@ -7,6 +7,7 @@ import { FoodModule } from './modules/food/food.module';
 import { ExercisesModule } from './modules/exercises/exercises.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { databaseConfig } from './config/database.config';
+import { RecipeModule } from './modules/recipe/recipe.module';
 
 @Module({
   imports: [
@@ -19,6 +20,8 @@ import { databaseConfig } from './config/database.config';
     FoodModule,
     ExercisesModule,
     ChatModule,
+    RecipeModule
+    
   ],
   controllers: [],
   providers: [],
