@@ -1,142 +1,154 @@
-import { Controller, Get, Post, Query, Param, Body } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Query,
+  Param,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiQuery,
   ApiParam,
-  ApiBody,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { FoodService } from './food.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { GetUser } from '../auth/decorators/get-user.decorator';
+import { User } from '../users/entities/user.entity';
+import { FoodSearchDto } from './dto/food-search.dto';
 
 @ApiTags('Food')
+@ApiBearerAuth()
 @Controller('food')
 export class FoodController {
   constructor(private readonly foodService: FoodService) {}
 
   @Get('search')
   @ApiOperation({
-    summary: 'Search food items',
-    description: 'Search for food items with various filtering options',
+    summary: 'Search foods in USDA database',
+    description: 'Search for foods with pagination support',
   })
-  @ApiQuery({
-    name: 'query',
-    description: 'Search query string',
-    required: true,
-  })
-  @ApiQuery({
-    name: 'pageSize',
-    description: 'Number of items per page',
-    required: false,
-  })
-  @ApiQuery({ name: 'pageNumber', description: 'Page number', required: false })
-  @ApiQuery({
-    name: 'sortBy',
-    description: 'Field to sort by',
-    required: false,
-  })
-  @ApiQuery({
-    name: 'sortOrder',
-    enum: ['asc', 'desc'],
-    description: 'Sort order',
-    required: false,
-  })
-  @ApiQuery({
-    name: 'brandOwner',
-    description: 'Filter by brand owner',
-    required: false,
-  })
-  @ApiQuery({
-    name: 'dataType',
-    description: 'Filter by data type(s)',
-    required: false,
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'List of food items matching the search criteria',
-  })
-  async searchFood(
-    @Query('query') query: string,
-    @Query('pageSize') pageSize?: number,
-    @Query('pageNumber') pageNumber?: number,
-    @Query('sortBy') sortBy?: string,
-    @Query('sortOrder') sortOrder?: 'asc' | 'desc',
-    @Query('brandOwner') brandOwner?: string,
-    @Query('dataType') dataType?: string,
-  ) {
-    return await this.foodService.searchFood({
-      query,
-      pageSize,
-      pageNumber,
-      sortBy,
-      sortOrder,
-      brandOwner,
-      dataType: dataType ? dataType.split(',') : undefined,
-    });
+  @ApiResponse({ status: 200, description: 'List of foods with pagination' })
+  async searchFood(@Query() searchDto: FoodSearchDto) {
+    return await this.foodService.searchFoods(
+      searchDto.query,
+      searchDto.page,
+      searchDto.pageSize,
+    );
   }
 
   @Get('details/:fdcId')
   @ApiOperation({
     summary: 'Get food details',
-    description: 'Get detailed information about a specific food item',
+    description: 'Get detailed nutritional information for a specific food',
   })
-  @ApiParam({ name: 'fdcId', description: 'Food Data Central ID' })
+  @ApiParam({
+    name: 'fdcId',
+    description: 'USDA Food Data Central ID',
+    type: String,
+  })
+  @ApiResponse({ status: 200, description: 'Food details' })
+  @ApiResponse({ status: 404, description: 'Food not found' })
+  async getFoodDetails(@Param('fdcId') fdcId: string) {
+    return await this.foodService.getFoodDetails(fdcId);
+  }
+
+  @Post('favorites/:fdcId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Add food to favorites',
+    description: "Save a food item to user's favorites",
+  })
+  @ApiParam({
+    name: 'fdcId',
+    description: 'USDA Food Data Central ID',
+    type: String,
+  })
+  @ApiResponse({ status: 201, description: 'Food added to favorites' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async addToFavorites(@Param('fdcId') fdcId: string, @GetUser() user: User) {
+    const foodDetails = await this.foodService.getFoodDetails(fdcId);
+    return await this.foodService.addToFavorites(foodDetails, user);
+  }
+
+  @Get('favorites')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get favorite foods',
+    description: "Get user's favorite foods with pagination",
+  })
   @ApiQuery({
-    name: 'format',
-    enum: ['abridged', 'full'],
-    description: 'Response format type',
+    name: 'page',
     required: false,
+    description: 'Page number (default: 1)',
+    type: Number,
   })
-  @ApiResponse({ status: 200, description: 'Food item details' })
-  @ApiResponse({ status: 404, description: 'Food item not found' })
-  async getFoodDetails(
-    @Param('fdcId') fdcId: string,
-    @Query('format') format?: 'abridged' | 'full',
+  @ApiQuery({
+    name: 'pageSize',
+    required: false,
+    description: 'Number of items per page (default: 10)',
+    type: Number,
+  })
+  @ApiResponse({ status: 200, description: 'List of favorite foods' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @Get('favorites')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get favorite foods',
+    description: "Get user's favorite foods with pagination",
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number (default: 1)',
+    type: Number,
+  })
+  @ApiQuery({
+    name: 'pageSize',
+    required: false,
+    description: 'Number of items per page (default: 10)',
+    type: Number,
+  })
+  @ApiResponse({ status: 200, description: 'List of favorite foods' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getFavorites(
+    @GetUser() user: User,
+    @Query('page') page: string = '1',
+    @Query('pageSize') pageSize: string = '10',
   ) {
-    return await this.foodService.getFoodDetails(fdcId, format);
+    const parsedPage = parseInt(page, 10);
+    const parsedPageSize = parseInt(pageSize, 10);
+    return await this.foodService.getFavorites(
+      user,
+      parsedPage,
+      parsedPageSize,
+    );
   }
 
-  @Post('bulk')
+  @Delete('favorites/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Get multiple food items',
-    description: 'Retrieve multiple food items by their IDs',
+    summary: 'Remove food from favorites',
+    description: "Remove a food item from user's favorites",
   })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        fdcIds: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Array of Food Data Central IDs',
-        },
-      },
-    },
+  @ApiParam({
+    name: 'id',
+    description: 'Favorite food ID',
+    type: String,
   })
-  @ApiResponse({ status: 200, description: 'List of food items' })
-  async getFoodsByIds(@Body() body: { fdcIds: string[] }) {
-    return await this.foodService.getFoodsByIds(body.fdcIds);
-  }
-
-  @Get(':fdcId/nutrients')
-  @ApiOperation({
-    summary: 'Get food nutrients',
-    description: 'Get nutritional information for a specific food item',
-  })
-  @ApiParam({ name: 'fdcId', description: 'Food Data Central ID' })
-  @ApiResponse({ status: 200, description: 'Food nutrient information' })
-  @ApiResponse({ status: 404, description: 'Food item not found' })
-  async getFoodNutrients(@Param('fdcId') fdcId: string) {
-    return await this.foodService.getFoodNutrients(fdcId);
-  }
-
-  @Get('saved')
-  @ApiOperation({
-    summary: 'Get saved foods',
-    description: 'Get list of all saved/favorite food items',
-  })
-  @ApiResponse({ status: 200, description: 'List of saved food items' })
-  async getAllSavedFoods() {
-    return await this.foodService.getAllSavedFoods();
+  @ApiResponse({ status: 200, description: 'Food removed from favorites' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Food not found' })
+  async removeFavorite(@Param('id') id: string, @GetUser() user: User) {
+    await this.foodService.removeFavorite(id, user);
+    return { message: 'Food removed from favorites' };
   }
 }

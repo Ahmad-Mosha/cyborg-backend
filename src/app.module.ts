@@ -22,8 +22,7 @@ import { RecipeModule } from './modules/recipe/recipe.module';
     CommunityModule,
     ExercisesModule,
     ChatModule,
-    RecipeModule
-    
+    RecipeModule,
   ],
   controllers: [],
   providers: [],

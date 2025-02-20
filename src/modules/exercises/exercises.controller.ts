@@ -13,6 +13,7 @@ import {
   ApiResponse,
   ApiParam,
   ApiQuery,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { ExercisesService } from './exercises.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -21,6 +22,7 @@ import { User } from '../users/entities/user.entity';
 import { CreateCustomExerciseDto } from './dto/create-custom-exercise.dto';
 
 @ApiTags('Exercises')
+@ApiBearerAuth()
 @Controller('exercises')
 export class ExercisesController {
   constructor(private readonly exercisesService: ExercisesService) {}
