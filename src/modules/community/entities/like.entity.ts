@@ -1,23 +1,42 @@
-// import {
-//   Entity,
-//   PrimaryGeneratedColumn,
-//   ManyToOne,
-//   CreateDateColumn,
-// } from 'typeorm';
-// import { User } from '../../users/entities/user.entity';
-// import { Post } from './post.entity';
+import {
+  Entity,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  Unique
+} from 'typeorm';
+import { BaseEntity } from './base.entity';
+import { User } from '../../users/entities/user.entity';
+import { Post } from './post.entity';
+import { Comment } from './comment.entity';
+import { LikeTargetType } from '../dto/create-like.dto';
 
-// @Entity('likes')
-// export class Like {
-//   @PrimaryGeneratedColumn('uuid')
-//   id: string;
+@Entity('likes')
+@Unique(['userId', 'postId'])
+@Unique(['userId', 'commentId'])
+export class Like extends BaseEntity {
+  @ManyToOne(() => User)
+  @JoinColumn()
+  user: User;
 
-//   @ManyToOne(() => User, (user) => user.likes)
-//   user: User;
+  @Column()
+  userId: string;
 
-//   @ManyToOne(() => Post, (post) => post.likes)
-//   post: Post;
+  @ManyToOne(() => Post, { nullable: true })
+  @JoinColumn()
+  post: Post;
 
-//   @CreateDateColumn()
-//   createdAt: Date;
-// }
+  @Column({ nullable: true })
+  postId: string;
+
+  @ManyToOne(() => Comment, { nullable: true })
+  @JoinColumn()
+  comment: Comment;
+
+  @Column({ nullable: true })
+  commentId: string;
+  @Column({
+    type: 'varchar'
+  })
+  targetType: LikeTargetType;
+}

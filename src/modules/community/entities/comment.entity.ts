@@ -1,40 +1,47 @@
-// import {
-//   Entity,
-//   PrimaryGeneratedColumn,
-//   Column,
-//   ManyToOne,
-//   CreateDateColumn,
-//   UpdateDateColumn,
-// } from 'typeorm';
-// import { User } from '../../users/entities/user.entity';
-// import { Post } from './post.entity';
+import {
+  Entity,
+  Column,
+  ManyToOne,
+  OneToMany,
+  JoinColumn,
+} from 'typeorm';
+import { BaseEntity } from './base.entity';
+import { User } from '../../users/entities/user.entity';
+import { Post } from './post.entity';
+import { Like } from './like.entity';
 
-// @Entity('comments')
-// export class Comment {
-//   @PrimaryGeneratedColumn('uuid')
-//   id: string;
+@Entity('comments')
+export class Comment extends BaseEntity {
+  @Column('text')
+  content: string;
 
-//   @Column('text')
-//   content: string;
+  @ManyToOne(() => Post, post => post.comments)
+  @JoinColumn()
+  post: Post;
 
-//   @ManyToOne(() => User, (user) => user.comments)
-//   author: User;
+  @Column()
+  postId: string;
 
-//   @ManyToOne(() => Post, (post) => post.comments)
-//   post: Post;
+  @ManyToOne(() => User, user => user.comments)
+  @JoinColumn()
+  author: User;
 
-//   @ManyToOne(() => Comment, { nullable: true })
-//   parentComment: Comment;
+  @Column()
+  authorId: string;
 
-//   @Column({ default: false })
-//   isEdited: boolean;
+  @ManyToOne(() => Comment, { nullable: true })
+  @JoinColumn()
+  parentComment: Comment;
 
-//   @Column({ default: false })
-//   isDeleted: boolean;
+  @Column({ nullable: true })
+  parentCommentId: string;
 
-//   @CreateDateColumn()
-//   createdAt: Date;
+  @OneToMany(() => Like, like => like.comment)
+  likes: Like[];
 
-//   @UpdateDateColumn()
-//   updatedAt: Date;
-// }
+  @Column({ default: 0 })
+  likesCount: number;
+
+  @Column({ default: false })
+  isEdited: boolean;
+}

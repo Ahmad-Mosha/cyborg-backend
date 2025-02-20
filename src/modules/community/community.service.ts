@@ -1,169 +1,252 @@
-// import {
-//   Injectable,
-//   NotFoundException,
-//   ForbiddenException,
-// } from '@nestjs/common';
-// import { InjectRepository } from '@nestjs/typeorm';
-// import { Repository } from 'typeorm';
-// import { Post, PostStatus } from './entities/post.entity';
-// import { Comment } from './entities/comment.entity';
-// import { Like } from './entities/like.entity';
-// import { CreatePostDto } from './dto/create-post.dto';
-// import { CreateCommentDto } from './dto/create-comment.dto';
-// import { User } from '../users/entities/user.entity';
+import { Injectable, NotFoundException, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User } from '../users/entities/user.entity';
+import { Post, PostType, PostStatus } from './entities/post.entity';
+import { Comment } from './entities/comment.entity';
+import { Like } from './entities/like.entity';
+import { CreatePostDto } from './dto/create-post.dto';
+import { UpdatePostDto } from './dto/update-post.dto';
+import { CreateCommentDto } from './dto/create-comment.dto';
+import { CreateLikeDto, LikeTargetType } from './dto/create-like.dto';
 
-// @Injectable()
-// export class CommunityService {
-//   constructor(
-//     @InjectRepository(Post)
-//     private postRepository: Repository<Post>,
-//     @InjectRepository(Comment)
-//     private commentRepository: Repository<Comment>,
-//     @InjectRepository(Like)
-//     private likeRepository: Repository<Like>,
-//   ) {}
+@Injectable()
+export class CommunityService {
+  constructor(
+    @InjectRepository(Post)
+    private readonly postRepository: Repository<Post>,
+    @InjectRepository(Comment)
+    private readonly commentRepository: Repository<Comment>,
+    @InjectRepository(Like)
+    private readonly likeRepository: Repository<Like>
+  ) {}
 
-//   // Post Methods
-//   async createPost(user: User, createPostDto: CreatePostDto): Promise<Post> {
-//     const post = this.postRepository.create({
-//       ...createPostDto,
-//       author: user,
-//     });
-//     return await this.postRepository.save(post);
-//   }
+  // Posts methods
+  async createPost(user: User, createPostDto: CreatePostDto) {
+    const post = this.postRepository.create({
+      ...createPostDto,
+      author: user,
+      authorId: user.id
+    });
+    return await this.postRepository.save(post);
+  }
 
-//   async getPosts(
-//     page: number = 1,
-//     limit: number = 10,
-//   ): Promise<[Post[], number]> {
-//     return await this.postRepository.findAndCount({
-//       where: { status: PostStatus.ACTIVE },
-//       relations: ['author', 'likes', 'comments'],
-//       order: { createdAt: 'DESC' },
-//       skip: (page - 1) * limit,
-//       take: limit,
-//     });
-//   }
+  async getPosts({ page = 1, limit = 10, type, status = PostStatus.PUBLISHED }) {
+    const query = this.postRepository.createQueryBuilder('post')
+      .leftJoinAndSelect('post.author', 'author')
+      .where('post.status = :status', { status });
 
-//   async getPost(id: string): Promise<Post> {
-//     const post = await this.postRepository.findOne({
-//       where: { id, status: PostStatus.ACTIVE },
-//       relations: ['author', 'comments', 'comments.author', 'likes'],
-//     });
+    if (type) {
+      query.andWhere('post.type = :type', { type });
+    }
 
-//     if (!post) {
-//       throw new NotFoundException('Post not found');
-//     }
+    const [posts, total] = await query
+      .orderBy('post.isPinned', 'DESC')
+      .addOrderBy('post.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
 
-//     return post;
-//   }
+    return {
+      items: posts,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
+  }
 
-//   async deletePost(id: string, user: User): Promise<void> {
-//     const post = await this.postRepository.findOne({
-//       where: { id },
-//       relations: ['author'],
-//     });
+  async getPost(id: string) {
+    const post = await this.postRepository.findOne({
+      where: { id },
+      relations: ['author']
+    });
 
-//     if (!post) {
-//       throw new NotFoundException('Post not found');
-//     }
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
 
-//     if (post.author.id !== user.id && !user.roles.includes('admin')) {
-//       throw new ForbiddenException('You cannot delete this post');
-//     }
+    return post;
+  }
 
-//     post.status = PostStatus.DELETED;
-//     await this.postRepository.save(post);
-//   }
+  async updatePost(id: string, updatePostDto: UpdatePostDto, user: User) {
+    const post = await this.getPost(id);
 
-//   // Comment Methods
-//   async createComment(
-//     user: User,
-//     postId: string,
-//     createCommentDto: CreateCommentDto,
-//   ): Promise<Comment> {
-//     const post = await this.postRepository.findOne({
-//       where: { id: postId, status: PostStatus.ACTIVE },
-//     });
+    if (post.authorId !== user.id) {
+      throw new UnauthorizedException('You can only update your own posts');
+    }
 
-//     if (!post) {
-//       throw new NotFoundException('Post not found');
-//     }
+    Object.assign(post, updatePostDto);
+    
+    return await this.postRepository.save(post);
+  }
 
-//     let parentComment: Comment | null = null;
-//     if (createCommentDto.parentCommentId) {
-//       parentComment = await this.commentRepository.findOne({
-//         where: { id: createCommentDto.parentCommentId },
-//       });
-//       if (!parentComment) {
-//         throw new NotFoundException('Parent comment not found');
-//       }
-//     }
+  async deletePost(id: string, user: User) {
+    const post = await this.getPost(id);
 
-//     const comment = this.commentRepository.create({
-//       content: createCommentDto.content,
-//       author: user,
-//       post,
-//       parentComment,
-//     });
+    if (post.authorId !== user.id) {
+      throw new UnauthorizedException('You can only delete your own posts');
+    }
 
-//     const savedComment = await this.commentRepository.save(comment);
-//     post.commentsCount += 1;
-//     await this.postRepository.save(post);
+    await this.postRepository.remove(post);
+  }
 
-//     return savedComment;
-//   }
+  // Comments methods
+  async createComment(user: User, postId: string, createCommentDto: CreateCommentDto) {
+    const post = await this.getPost(postId);
 
-//   // Like Methods
-//   async toggleLike(user: User, postId: string): Promise<{ liked: boolean }> {
-//     const post = await this.postRepository.findOne({
-//       where: { id: postId, status: PostStatus.ACTIVE },
-//     });
+    if (post.isLocked) {
+      throw new BadRequestException('This post is locked and cannot receive new comments');
+    }
 
-//     if (!post) {
-//       throw new NotFoundException('Post not found');
-//     }
+    let parentComment: Comment | null = null;
+    if (createCommentDto.parentCommentId) {
+      parentComment = await this.commentRepository.findOne({
+        where: { id: createCommentDto.parentCommentId }
+      });
 
-//     const existingLike = await this.likeRepository.findOne({
-//       where: { user: { id: user.id }, post: { id: postId } },
-//     });
+      if (!parentComment) {
+        throw new NotFoundException('Parent comment not found');
+      }
+    }
 
-//     if (existingLike) {
-//       await this.likeRepository.remove(existingLike);
-//       post.likesCount -= 1;
-//       await this.postRepository.save(post);
-//       return { liked: false };
-//     }
+    const comment = this.commentRepository.create({
+      ...createCommentDto,
+      post,
+      postId,
+      author: user,
+      authorId: user.id,
+      parentComment
+    });
 
-//     const like = this.likeRepository.create({
-//       user,
-//       post,
-//     });
-//     await this.likeRepository.save(like);
-//     post.likesCount += 1;
-//     await this.postRepository.save(post);
-//     return { liked: true };
-//   }
+    return await this.commentRepository.save(comment);
+  }
 
-//   // Admin Methods
-//   async moderatePost(
-//     user: User,
-//     postId: string,
-//     status: PostStatus,
-//   ): Promise<Post> {
-//     if (!user.roles.includes('admin')) {
-//       throw new ForbiddenException('Only admins can moderate posts');
-//     }
+  async getComments(postId: string, { page = 1, limit = 10 }) {
+    const [comments, total] = await this.commentRepository.findAndCount({
+      where: { postId },
+      relations: ['author', 'parentComment'],
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit
+    });
 
-//     const post = await this.postRepository.findOne({
-//       where: { id: postId },
-//     });
+    return {
+      items: comments,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+    }
+    };
+}
 
-//     if (!post) {
-//       throw new NotFoundException('Post not found');
-//     }
+    async deleteComment(id: string, user: User) {
+        const comment = await this.commentRepository.findOne({
+        where: { id },
+        relations: ['author']
+    });
 
-//     post.status = status;
-//     return await this.postRepository.save(post);
-//   }
-// }
+    if (!comment) {
+        throw new NotFoundException('Comment not found');
+    }
+
+    if (comment.authorId !== user.id) {
+        throw new UnauthorizedException('You can only delete your own comments');
+    }
+
+    await this.commentRepository.remove(comment);
+}
+
+  // Likes methods
+    async createLike(user: User, createLikeDto: CreateLikeDto) {
+        const { targetType, targetId } = createLikeDto;
+        const postId = targetType === LikeTargetType.POST ? targetId : undefined;
+        const commentId = targetType === LikeTargetType.COMMENT ? targetId : undefined;
+
+    // Validate target exists
+    if (targetType === LikeTargetType.POST) {
+        await this.getPost(postId);
+    } else {
+        const comment = await this.commentRepository.findOne({
+        where: { id: commentId }
+});
+        if (!comment) {
+            throw new NotFoundException('Comment not found');
+    }
+    }
+    const existingLike = await this.likeRepository.findOne({
+        where: targetType === LikeTargetType.POST
+        ? { userId: user.id, postId }
+        : { userId: user.id, commentId }
+    });
+
+    if (existingLike) {
+        throw new BadRequestException('You have already liked this item');
+    }
+
+    const like = this.likeRepository.create({
+        user,
+        userId: user.id,
+        targetType,
+        ...(targetType === LikeTargetType.POST ? { postId } : { commentId })
+    });
+
+    await this.likeRepository.save(like);
+
+    // Update likes count
+    if (targetType === LikeTargetType.POST) {
+        await this.postRepository.increment({ id: postId }, 'likesCount', 1);
+    } else {
+        await this.commentRepository.increment({ id: commentId }, 'likesCount', 1);
+    }
+
+    return like;
+}
+
+    async deleteLike(id: string, user: User) {
+        const like = await this.likeRepository.findOne({
+        where: { id },
+        relations: ['post', 'comment']
+    });
+
+    if (!like) {
+        throw new NotFoundException('Like not found');
+    }
+
+    if (like.userId !== user.id) {
+        throw new UnauthorizedException('You can only remove your own likes');
+    }
+
+    await this.likeRepository.remove(like);
+
+    // hena Update likes count
+    if (like.targetType === LikeTargetType.POST) {
+        await this.postRepository.decrement({ id: like.postId }, 'likesCount', 1);
+    } else {
+        await this.commentRepository.decrement({ id: like.commentId }, 'likesCount', 1);
+    }
+}
+
+  // Admin methods lesa 3ayza at2aked eno el user admin
+  /*  async togglePin(id: string) {
+        const post = await this.getPost(id);
+        post.isPinned = !post.isPinned;
+        return await this.postRepository.save(post);
+}
+
+    async toggleLock(id: string) {
+        const post = await this.getPost(id);
+        post.isLocked = !post.isLocked;
+        return await this.postRepository.save(post);
+}
+
+    async moderatePost(id: string, status: PostStatus) {
+        const post = await this.getPost(id);
+        post.status = status;
+        return await this.postRepository.save(post);
+} */
+}
