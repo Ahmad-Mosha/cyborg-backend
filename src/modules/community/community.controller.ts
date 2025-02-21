@@ -30,6 +30,7 @@ import { UpdatePostDto } from './dto/update-post.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { CreateLikeDto } from './dto/create-like.dto';
 import { PostType, PostStatus } from './entities/post.entity';
+import { LikeTargetType } from './dto/create-like.dto';
 
 @ApiTags('Community')
 @Controller('community')
@@ -125,20 +126,24 @@ export class CommunityController {
   }
 
   // Likes endpoints
-  @Post('likes')
-  @ApiOperation({ summary: 'Create a like' })
+  @Post(':targetType/:id/like')
+  @ApiOperation({ summary: 'Like a post or comment' })
+  @ApiResponse({ status: HttpStatus.CREATED, description: 'Target liked successfully' })
   createLike(
     @GetUser() user: User,
-    @Body() createLikeDto: CreateLikeDto
+    @Param('targetType') targetType: LikeTargetType,
+    @Param('id', ParseUUIDPipe) id: string
   ) {
+    const createLikeDto = { targetType, targetId: id };
     return this.communityService.createLike(user, createLikeDto);
   }
 
-  @Delete('likes/:id')
-  @ApiOperation({ summary: 'Remove a like' })
+  @Delete(':targetType/:id/like')
+  @ApiOperation({ summary: 'Remove like from a post or comment' })
   @HttpCode(HttpStatus.NO_CONTENT)
   deleteLike(
     @GetUser() user: User,
+    @Param('targetType') targetType: 'post' | 'comment',
     @Param('id', ParseUUIDPipe) id: string
   ) {
     return this.communityService.deleteLike(id, user);
