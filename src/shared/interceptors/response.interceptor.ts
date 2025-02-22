@@ -18,7 +18,6 @@ export class ResponseInterceptor implements NestInterceptor {
   private transformData(data: any): any {
     if (!data) return data;
 
-    // Define sensitive and unnecessary fields to remove
     const sensitiveFields = [
       'password',
       'refreshToken',
@@ -36,10 +35,14 @@ export class ResponseInterceptor implements NestInterceptor {
     if (typeof data === 'object' && data !== null) {
       const transformed = { ...data };
       
-      // Remove sensitive fields
+      // Remove 
+      /**
+       * 1. password
+       * 2. refreshToken
+       * and so on
+       */
       sensitiveFields.forEach(field => delete transformed[field]);
 
-      // Recursively transform nested objects and arrays
       Object.keys(transformed).forEach(key => {
         if (typeof transformed[key] === 'object' && transformed[key] !== null) {
           transformed[key] = this.transformData(transformed[key]);
