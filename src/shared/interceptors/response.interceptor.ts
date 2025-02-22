@@ -21,11 +21,6 @@ export class ResponseInterceptor implements NestInterceptor {
     const sensitiveFields = [
       'password',
       'refreshToken',
-      'roles',
-      'isActive',
-      'isFirstLogin',
-      'deletedAt',
-      'updatedAt'
     ];
 
     if (Array.isArray(data)) {
@@ -34,15 +29,18 @@ export class ResponseInterceptor implements NestInterceptor {
 
     if (typeof data === 'object' && data !== null) {
       const transformed = { ...data };
-      
-      // Remove 
-      /**
-       * 1. password
-       * 2. refreshToken
-       * and so on
-       */
+
+      // Remove sensitive fields
       sensitiveFields.forEach(field => delete transformed[field]);
 
+      // Handle dates specifically
+      ['createdAt', 'updatedAt', 'deletedAt'].forEach(dateField => {
+        if (transformed[dateField] instanceof Date) {
+          transformed[dateField] = transformed[dateField].toISOString();
+        }
+      });
+
+      // Transform nested objects
       Object.keys(transformed).forEach(key => {
         if (typeof transformed[key] === 'object' && transformed[key] !== null) {
           transformed[key] = this.transformData(transformed[key]);

@@ -11,15 +11,15 @@ export abstract class BaseEntity {
   @Expose()
   id: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'datetime' })
   @Expose()
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: 'datetime' })
   @Expose()
   updatedAt: Date;
 
-  @DeleteDateColumn()
+  @DeleteDateColumn({ type: 'datetime' })
   @Expose()
   deletedAt?: Date;
 }
