@@ -128,28 +128,24 @@ export class CommunityController {
     return this.communityService.deleteComment(id, user);
   }
 
+  /**
+   * 
+   * @param user 
+   * @param targetType  The type of the target (post or comment)
+   * @param id  The id of the post or comment
+   * @returns  The like status toggled successfully
+   */
   // Likes endpoints
-  @Post(':targetType/:id/like')
-  @ApiOperation({ summary: 'Like a post or comment' })
-  @ApiResponse({ status: HttpStatus.CREATED, description: 'Target liked successfully' })
-  createLike(
+  @Post(':targetType/:id/toggle-like')
+  @ApiOperation({ summary: 'Toggle like status for a post or comment' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Like status toggled successfully' })
+  toggleLike(
     @GetUser() user: User,
     @Param('targetType') targetType: LikeTargetType,
     @Param('id', ParseUUIDPipe) id: string
   ) {
     const createLikeDto = { targetType, targetId: id };
-    return this.communityService.createLike(user, createLikeDto);
-  }
-
-  @Delete(':targetType/:id/like')
-  @ApiOperation({ summary: 'Remove like from a post or comment' })
-  @HttpCode(HttpStatus.NO_CONTENT)
-  deleteLike(
-    @GetUser() user: User,
-    @Param('targetType') targetType: 'post' | 'comment',
-    @Param('id', ParseUUIDPipe) id: string
-  ) {
-    return this.communityService.deleteLike(id, user);
+    return this.communityService.toggleLike(user, createLikeDto);
   }
 
   
