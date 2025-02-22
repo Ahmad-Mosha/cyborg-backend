@@ -22,7 +22,7 @@ export class CommunityService {
   ) {}
 
   // Posts methods
-  async createPost(user: User, createPostDto: CreatePostDto) {
+async createPost(user: User, createPostDto: CreatePostDto) {
     const post = this.postRepository.create({
       ...createPostDto,
       author: user,

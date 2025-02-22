@@ -10,7 +10,8 @@ import {
   UseGuards,
   ParseUUIDPipe,
   HttpCode,
-  HttpStatus
+  HttpStatus,
+  UseInterceptors
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -31,11 +32,13 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 import { CreateLikeDto } from './dto/create-like.dto';
 import { PostType, PostStatus } from './entities/post.entity';
 import { LikeTargetType } from './dto/create-like.dto';
+import { ResponseInterceptor } from '@shared/interceptors/response.interceptor';
 
 @ApiTags('Community')
 @Controller('community')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
+@UseInterceptors(ResponseInterceptor)
 export class CommunityController {
   constructor(private readonly communityService: CommunityService) {}
 
