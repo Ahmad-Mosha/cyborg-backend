@@ -74,6 +74,9 @@ export class User {
 
   @UpdateDateColumn()
   updatedAt: Date;
+    comments: any;
+    likes: any;
+    posts: any;
 
   hasRole(role: UserRole): boolean {
     return this.roles.includes(role);
