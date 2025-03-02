@@ -11,6 +11,7 @@ import { Exclude } from 'class-transformer';
 import { ROLES, UserRole } from '../../../shared/constants/roles.constant';
 import { UserData } from './user-data.entity';
 import { ChatConversation } from '../../chat/entities/chat-conversation.entity';
+import { WorkoutPlan } from '@modules/workout/entities/workout-plan.entity';
 
 @Entity('users')
 export class User {
@@ -33,17 +34,11 @@ export class User {
   @OneToOne(() => UserData, (health) => health.user)
   health: UserData;
 
-  // @OneToMany(() => WorkoutRoutine, (routine) => routine.creator)
-  // workoutRoutines: WorkoutRoutine[];
-
-  // @OneToMany(() => WorkoutSession, (session) => session.user)
-  // workoutSessions: WorkoutSession[];
-
-  // @OneToMany(() => Meal, (meal) => meal.user)
-  // meals: Meal[];
-
   @OneToMany(() => ChatConversation, (conversation) => conversation.user)
   chatConversations: ChatConversation[];
+
+  @OneToMany(() => WorkoutPlan, (workoutPlan) => workoutPlan.user)
+  workoutPlans: WorkoutPlan[];
 
   @Column('text', {
     default: JSON.stringify([ROLES.USER]),
@@ -74,9 +69,9 @@ export class User {
 
   @UpdateDateColumn()
   updatedAt: Date;
-    comments: any;
-    likes: any;
-    posts: any;
+  comments: any;
+  likes: any;
+  posts: any;
 
   hasRole(role: UserRole): boolean {
     return this.roles.includes(role);
