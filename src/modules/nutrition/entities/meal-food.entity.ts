@@ -1,42 +1,30 @@
-// import {
-//   Entity,
-//   PrimaryGeneratedColumn,
-//   Column,
-//   ManyToOne,
-//   CreateDateColumn,
-// } from 'typeorm';
-// import { Meal } from './meal.entity';
-// import { Food } from './food.entity';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
+import { Meal } from './meal.entity';
+import { Food } from '../../food/entities/food.entity';
+import { BaseEntity } from './base.entity';
+import { NutrientColumns } from './embedded/nutrient-columns.entity';
 
-// @Entity('meal_foods')
-// export class MealFood {
-//   @PrimaryGeneratedColumn('uuid')
-//   id: string;
+@Entity('meal_foods')
+export class MealFood extends BaseEntity {
+  @Column(() => NutrientColumns)
+  nutrients: NutrientColumns;
 
-//   @ManyToOne(() => Meal, (meal) => meal.mealFoods)
-//   meal: Meal;
+  @Column({ type: 'float' })
+  servingSize: number;
 
-//   @ManyToOne(() => Food)
-//   food: Food;
+  @Column({ default: 'g' })
+  servingUnit: string;
 
-//   @Column({ type: 'float' })
-//   servingSize: number;
+  @Column({ type: 'boolean', default: false })
+  eaten: boolean;
 
-//   @Column()
-//   servingUnit: string;
+  @Index('idx_meal_food_eaten_at')
+  @Column({ type: 'datetime', nullable: true })
+  eatenAt: Date;
 
-//   @Column({ type: 'float' })
-//   calories: number;
+  @ManyToOne(() => Meal, meal => meal.mealFoods, { onDelete: 'CASCADE' })
+  meal: Meal;
 
-//   @Column({ type: 'float' })
-//   protein: number;
-
-//   @Column({ type: 'float' })
-//   carbs: number;
-
-//   @Column({ type: 'float' })
-//   fat: number;
-
-//   @CreateDateColumn()
-//   createdAt: Date;
-// }
+  @ManyToOne(() => Food, { onDelete: 'CASCADE' })
+  food: Food;
+}

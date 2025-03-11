@@ -1,64 +1,49 @@
-// import {
-//   Entity,
-//   PrimaryGeneratedColumn,
-//   Column,
-//   ManyToOne,
-//   OneToMany,
-//   CreateDateColumn,
-//   UpdateDateColumn,
-// } from 'typeorm';
-// import { User } from '../../users/entities/user.entity';
-// import { MealFood } from './meal-food.entity';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
+import { BaseEntity } from './base.entity';
+import { MealPlan } from './meal-plan.entity';
+import { MealFood } from './meal-food.entity';
+import { NutrientColumns } from './embedded/nutrient-columns.entity';
 
-// export enum MealType {
-//   BREAKFAST = 'breakfast',
-//   LUNCH = 'lunch',
-//   DINNER = 'dinner',
-//   SNACK = 'snack',
-// }
+@Entity('meals')
+export class Meal extends BaseEntity {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-// @Entity('meals')
-// export class Meal {
-//   @PrimaryGeneratedColumn('uuid')
-//   id: string;
+  @Column()
+  name: string;
 
-//   @Column()
-//   name: string;
+  @Column({ type: 'float', nullable: true })
+  targetCalories: number;
 
-//   @Column({
-//     type: 'simple-enum',
-//     enum: MealType,
-//     default: MealType.SNACK,
-//   })
-//   type: MealType;
+  @Column({ type: 'json', nullable: true })
+  nutritionGoals: {
+    protein: number;
+    carbs: number;
+    fat: number;
+  };
 
-//   @Column({ type: 'datetime' })
-//   consumedAt: Date;
+  @Index('idx_meal_target_time')
+  @Column({ type: 'time' })
+  targetTime: Date;
 
-//   @ManyToOne(() => User, (user) => user.meals)
-//   user: User;
+  @Column({ type: 'boolean', default: false })
+  eaten: boolean;
 
-//   @OneToMany(() => MealFood, (mealFood) => mealFood.meal, { cascade: true })
-//   mealFoods: MealFood[];
+  @Column({ type: 'datetime', nullable: true })
+  eatenAt: Date;
 
-//   @Column({ type: 'float', default: 0 })
-//   totalCalories: number;
+  @Column(() => NutrientColumns)
+  nutrients: NutrientColumns;
 
-//   @Column({ type: 'float', default: 0 })
-//   totalProtein: number;
+  @ManyToOne(() => MealPlan, mealPlan => mealPlan.meals, { onDelete: 'CASCADE' })
+  mealPlan: MealPlan;
 
-//   @Column({ type: 'float', default: 0 })
-//   totalCarbs: number;
+  @OneToMany(() => MealFood, mealFood => mealFood.meal, { cascade: true })
+  mealFoods: MealFood[];
 
-//   @Column({ type: 'float', default: 0 })
-//   totalFat: number;
+  @CreateDateColumn()
+  createdAt: Date;
 
-//   @Column({ nullable: true })
-//   notes: string;
-
-//   @CreateDateColumn()
-//   createdAt: Date;
-
-//   @UpdateDateColumn()
-//   updatedAt: Date;
-// }
+  @UpdateDateColumn()
+  updatedAt: Date;
+}

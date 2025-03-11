@@ -77,6 +77,12 @@ export class User {
     comments: any;
     likes: any;
     posts: any;
+  meals: any;
+    dailyCalorieGoal: any;
+    dailyProteinGoal: any;
+    dailyCarbsGoal: any;
+    dailyFatGoal: any;
+  mealPlans: any;
 
   hasRole(role: UserRole): boolean {
     return this.roles.includes(role);

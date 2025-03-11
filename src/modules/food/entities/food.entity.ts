@@ -12,47 +12,48 @@ export class Food {
   @Column({ nullable: true })
   description: string;
 
-  @Column({ type: 'float' })
+  @Column({ type: 'float' , nullable: true})
   fat: number;
 
-  @Column({ type: 'float' })
-  cholesterol: number;
+  @Column({ type: 'float', nullable: true }) 
+cholesterol: number;
 
-  @Column({ type: 'float' })
-  sodium: number;
+@Column({ type: 'float', nullable: true }) 
+sodium: number;
 
-  @Column({ type: 'float' })
-  potassium: number;
+@Column({ type: 'float', nullable: true }) 
+potassium: number;
 
-  @Column({ type: 'float' })
-  carbohydrates: number;
+@Column({ type: 'float', nullable: true }) 
+carbohydrates: number;
 
-  @Column({ type: 'float' })
-  fiber: number;
+@Column({ type: 'float', nullable: true }) 
+fiber: number;
 
-  @Column({ type: 'float' })
-  sugar: number;
+@Column({ type: 'float', nullable: true }) 
+sugar: number;
 
-  @Column({ type: 'float' })
-  protein: number;
+@Column({ type: 'float', nullable: true }) 
+protein: number;
 
-  @Column({ type: 'float' })
-  vitamin_a: number;
+@Column({ type: 'float', nullable: true }) 
+vitamin_a: number;
 
-  @Column({ type: 'float' })
-  vitamin_c: number;
+@Column({ type: 'float', nullable: true }) 
+vitamin_c: number;
 
-  @Column({ type: 'float' })
-  calcium: number;
+@Column({ type: 'float', nullable: true }) 
+calcium: number;
 
-  @Column({ type: 'float' })
-  iron: number;
+@Column({ type: 'float', nullable: true }) 
+iron: number;
 
-  @Column({ type: 'float' })
-  servingSize: number;
+@Column({ type: 'float', nullable: true }) 
+servingSize: number;
 
-  @Column()
-  servingUnit: string;
+@Column({ nullable: true }) 
+servingUnit: string;
+
 
   @Column({ type: 'text', nullable: true })
   usdaId: string;
