@@ -6,6 +6,8 @@ import {
   Post,
   Body,
   UseGuards,
+  NotFoundException,
+  Res,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -228,5 +230,37 @@ export class ExercisesController {
   @ApiResponse({ status: 200, description: 'List of custom exercises' })
   async getCustomExercises(@GetUser() user: User) {
     return await this.exercisesService.getCustomExercises(user);
+  }
+
+  @Get('gif/:id')
+  @ApiOperation({
+    summary: 'Get exercise GIF URL by ID',
+    description:
+      'Redirects to the current GIF URL for an exercise, handling URL changes over time',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'The exercise ID',
+    example: '0001',
+  })
+  @ApiResponse({
+    status: 302,
+    description: 'Redirects to the current GIF URL',
+  })
+  @ApiResponse({ status: 404, description: 'Exercise not found' })
+  async getExerciseGif(@Param('id') id: string, @Res() res) {
+    try {
+      const exercise = await this.exercisesService.getExerciseById(id);
+
+      if (!exercise || !exercise.gifUrl) {
+        throw new NotFoundException(
+          `Exercise with ID ${id} not found or has no GIF`,
+        );
+      }
+
+      return res.redirect(exercise.gifUrl);
+    } catch (error) {
+      throw new NotFoundException(`Exercise GIF not found: ${error.message}`);
+    }
   }
 }

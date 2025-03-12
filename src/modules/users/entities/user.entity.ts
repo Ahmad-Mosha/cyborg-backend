@@ -33,17 +33,10 @@ export class User {
   @OneToOne(() => UserData, (health) => health.user)
   health: UserData;
 
-  // @OneToMany(() => WorkoutRoutine, (routine) => routine.creator)
-  // workoutRoutines: WorkoutRoutine[];
-
-  // @OneToMany(() => WorkoutSession, (session) => session.user)
-  // workoutSessions: WorkoutSession[];
-
-  // @OneToMany(() => Meal, (meal) => meal.user)
-  // meals: Meal[];
-
   @OneToMany(() => ChatConversation, (conversation) => conversation.user)
   chatConversations: ChatConversation[];
+
+  
 
   @Column('text', {
     default: JSON.stringify([ROLES.USER]),
@@ -74,9 +67,9 @@ export class User {
 
   @UpdateDateColumn()
   updatedAt: Date;
-    comments: any;
-    likes: any;
-    posts: any;
+  comments: any;
+  likes: any;
+  posts: any;
 
   meals: any;
     dailyCalorieGoal: any;
