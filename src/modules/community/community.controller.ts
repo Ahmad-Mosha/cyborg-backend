@@ -10,7 +10,8 @@ import {
   UseGuards,
   ParseUUIDPipe,
   HttpCode,
-  HttpStatus
+  HttpStatus,
+  UseInterceptors
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -30,11 +31,14 @@ import { UpdatePostDto } from './dto/update-post.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { CreateLikeDto } from './dto/create-like.dto';
 import { PostType, PostStatus } from './entities/post.entity';
+import { LikeTargetType } from './dto/create-like.dto';
+import { ResponseInterceptor } from '@shared/interceptors/response.interceptor';
 
 @ApiTags('Community')
 @Controller('community')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
+@UseInterceptors(ResponseInterceptor)
 export class CommunityController {
   constructor(private readonly communityService: CommunityService) {}
 
@@ -124,24 +128,24 @@ export class CommunityController {
     return this.communityService.deleteComment(id, user);
   }
 
+  /**
+   * 
+   * @param user 
+   * @param targetType  The type of the target (post or comment)
+   * @param id  The id of the post or comment
+   * @returns  The like status toggled successfully
+   */
   // Likes endpoints
-  @Post('likes')
-  @ApiOperation({ summary: 'Create a like' })
-  createLike(
+  @Post(':targetType/:id/toggle-like')
+  @ApiOperation({ summary: 'Toggle like status for a post or comment' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Like status toggled successfully' })
+  toggleLike(
     @GetUser() user: User,
-    @Body() createLikeDto: CreateLikeDto
-  ) {
-    return this.communityService.createLike(user, createLikeDto);
-  }
-
-  @Delete('likes/:id')
-  @ApiOperation({ summary: 'Remove a like' })
-  @HttpCode(HttpStatus.NO_CONTENT)
-  deleteLike(
-    @GetUser() user: User,
+    @Param('targetType') targetType: LikeTargetType,
     @Param('id', ParseUUIDPipe) id: string
   ) {
-    return this.communityService.deleteLike(id, user);
+    const createLikeDto = { targetType, targetId: id };
+    return this.communityService.toggleLike(user, createLikeDto);
   }
 
   

@@ -4,17 +4,22 @@ import {
   UpdateDateColumn,
   DeleteDateColumn 
 } from 'typeorm';
+import { Expose } from 'class-transformer';
 
 export abstract class BaseEntity {
   @PrimaryGeneratedColumn('uuid')
+  @Expose()
   id: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'datetime' })
+  @Expose()
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: 'datetime' })
+  @Expose()
   updatedAt: Date;
 
-  @DeleteDateColumn()
+  @DeleteDateColumn({ type: 'datetime' })
+  @Expose()
   deletedAt?: Date;
 }
