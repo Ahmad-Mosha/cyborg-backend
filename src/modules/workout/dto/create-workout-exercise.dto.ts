@@ -42,22 +42,26 @@ export class CreateWorkoutExerciseDto {
   @ApiProperty({
     description: 'Array of sets for this exercise',
     type: [CreateExerciseSetDto],
+    required: false,
     example: [
       {
         setOrder: 1,
         reps: 12,
         weight: 50,
         notes: 'Warm-up set',
+        type: 'warm_up',
       },
       {
         setOrder: 2,
         reps: 10,
         weight: 60,
+        type: 'normal',
       },
     ],
   })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateExerciseSetDto)
-  sets: CreateExerciseSetDto[];
+  @IsOptional()
+  sets?: CreateExerciseSetDto[];
 }

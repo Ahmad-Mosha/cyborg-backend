@@ -1,26 +1,39 @@
-import { IsInt, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+  IsEnum,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { SetType } from '../entities/exercise-set.entity';
 
 export class AddExerciseSetDto {
   @ApiProperty({
-    description: 'Order of this set in the exercise (1-based)',
-    example: 3,
-    minimum: 1,
+    description: 'Rest time in seconds after this set',
+    example: 120,
+    minimum: 0,
+    default: 120,
+    required: false,
     type: Number,
   })
   @IsInt()
-  @Min(1)
-  setOrder: number;
+  @Min(0)
+  @IsOptional()
+  restTimeSeconds?: number;
 
   @ApiProperty({
     description: 'Number of repetitions to perform',
     example: 8,
     minimum: 0,
     type: Number,
+    required: false,
   })
   @IsInt()
   @Min(0)
-  reps: number;
+  @IsOptional()
+  reps?: number;
 
   @ApiProperty({
     description:
@@ -28,18 +41,30 @@ export class AddExerciseSetDto {
     example: 80,
     minimum: 0,
     type: Number,
+    required: false,
   })
   @IsNumber()
   @Min(0)
-  weight: number;
+  @IsOptional()
+  weight?: number;
 
   @ApiProperty({
     description: 'Additional notes for this set',
-    example: 'Working set with full effort',
+    example: 'Heavy set, spotter recommended',
     required: false,
     type: String,
   })
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @ApiProperty({
+    description: 'Type of set',
+    enum: SetType,
+    example: SetType.NORMAL,
+    default: SetType.NORMAL,
+  })
+  @IsEnum(SetType)
+  @IsOptional()
+  type?: SetType;
 }

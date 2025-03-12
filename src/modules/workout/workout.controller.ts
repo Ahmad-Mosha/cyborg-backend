@@ -4,43 +4,45 @@ import {
   Post,
   Body,
   Param,
-  Put,
   Delete,
   UseGuards,
-  Query,
   Req,
+  Put,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { WorkoutService } from './workout.service';
-import { CreateWorkoutPlanDto } from './dto/create-workout-plan.dto';
-import { StartWorkoutSessionDto } from './dto/start-workout-session.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { UpdateCompletedSetDto } from './dto/update-completed-set.dto';
-import { RequestWithUser } from '@shared/interfaces/request-with-user.interface';
 import {
   ApiTags,
-  ApiOperation,
   ApiResponse,
+  ApiOperation,
+  ApiParam,
   ApiBody,
   ApiBearerAuth,
-  ApiParam,
-  ApiExtraModels,
-  ApiProperty,
-  getSchemaPath,
 } from '@nestjs/swagger';
-import { WorkoutPlan } from './entities/workout-plan.entity';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequestWithUser } from '@shared/interfaces/request-with-user.interface';
+import { WorkoutPlan, PlanType } from './entities/workout-plan.entity';
+import { WorkoutDay } from './entities/workout-day.entity';
+import { WorkoutExercise } from './entities/workout-exercise.entity';
+import { ExerciseSet, SetType } from './entities/exercise-set.entity';
 import { WorkoutSession } from './entities/workout-session.entity';
+import { CompletedExercise } from './entities/completed-exercise.entity';
 import { CompletedSet } from './entities/completed-set.entity';
+import { CreateWorkoutPlanDto } from './dto/create-workout-plan.dto';
+import { StartWorkoutSessionDto } from './dto/start-workout-session.dto';
+import { UpdateCompletedSetDto } from './dto/update-completed-set.dto';
 import { AddWorkoutDayDto } from './dto/add-workout-day.dto';
 import { AddWorkoutExerciseDto } from './dto/add-workout-exercise.dto';
 import { AddExerciseSetDto } from './dto/add-exercise-set.dto';
-import { WorkoutDay } from './entities/workout-day.entity';
-import { WorkoutExercise } from './entities/workout-exercise.entity';
-import { ExerciseSet } from './entities/exercise-set.entity';
 import { WorkoutSessionResponseDto } from './dto/workout-session.response.dto';
 
-// Sample request and response examples
+// Import the new services
+import { PlanService } from './services/plan.service';
+import { DayService } from './services/day.service';
+import { ExerciseService } from './services/exercise.service';
+import { SessionService } from './services/session.service';
+import { AnalyticsService } from './services/analytics.service';
+
 const createWorkoutPlanExample = {
   name: '4-Day Split',
   description: 'My custom workout plan focusing on strength gains',
@@ -134,12 +136,18 @@ const addExerciseSetExample = {
   notes: 'Heavy set, spotter recommended',
 };
 
-@ApiTags('workout')
+@ApiTags('Workouts')
 @ApiBearerAuth()
 @Controller('workout')
 @UseGuards(JwtAuthGuard)
 export class WorkoutController {
-  constructor(private readonly workoutService: WorkoutService) {}
+  constructor(
+    private readonly planService: PlanService,
+    private readonly dayService: DayService,
+    private readonly exerciseService: ExerciseService,
+    private readonly sessionService: SessionService,
+    private readonly analyticsService: AnalyticsService,
+  ) {}
 
   // Workout Plan Endpoints
   @Post('plans')
@@ -164,7 +172,7 @@ export class WorkoutController {
     @Req() req: RequestWithUser,
     @Body() createPlanDto: CreateWorkoutPlanDto,
   ) {
-    return this.workoutService.createWorkoutPlan(req.user.id, createPlanDto);
+    return this.planService.createWorkoutPlan(req.user.id, createPlanDto);
   }
 
   @Get('plans')
@@ -175,7 +183,7 @@ export class WorkoutController {
     type: [WorkoutPlan],
   })
   getUserWorkoutPlans(@Req() req: RequestWithUser) {
-    return this.workoutService.getUserWorkoutPlans(req.user.id);
+    return this.planService.getUserWorkoutPlans(req.user.id);
   }
 
   @Get('plans/:id')
@@ -192,7 +200,7 @@ export class WorkoutController {
     example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
   })
   getWorkoutPlanById(@Req() req: RequestWithUser, @Param('id') planId: string) {
-    return this.workoutService.getWorkoutPlanById(req.user.id, planId);
+    return this.planService.getWorkoutPlanById(req.user.id, planId);
   }
 
   @Post('generate-plan')
@@ -203,10 +211,7 @@ export class WorkoutController {
     type: WorkoutPlan,
   })
   generateAIWorkoutPlan(@Req() req: RequestWithUser) {
-    return this.workoutService.generateAIWorkoutPlan(
-      req.user.id,
-      req.user.health,
-    );
+    return this.planService.generateAIWorkoutPlan(req.user.id, req.user.health);
   }
 
   @Delete('plans/:id')
@@ -226,7 +231,7 @@ export class WorkoutController {
     @Req() req: RequestWithUser,
     @Param('id') planId: string,
   ) {
-    await this.workoutService.deleteWorkoutPlan(req.user.id, planId);
+    await this.planService.deleteWorkoutPlan(req.user.id, planId);
   }
 
   // Workout Day Endpoints
@@ -258,7 +263,7 @@ export class WorkoutController {
     @Param('planId') planId: string,
     @Body() addDayDto: AddWorkoutDayDto,
   ) {
-    return this.workoutService.addWorkoutDay(req.user.id, planId, addDayDto);
+    return this.dayService.addWorkoutDay(req.user.id, planId, addDayDto);
   }
 
   @Delete('plans/:planId/days/:dayId')
@@ -284,7 +289,7 @@ export class WorkoutController {
     @Param('planId') planId: string,
     @Param('dayId') dayId: string,
   ) {
-    await this.workoutService.deleteWorkoutDay(req.user.id, planId, dayId);
+    await this.dayService.deleteWorkoutDay(req.user.id, planId, dayId);
   }
 
   // Workout Exercise Endpoints
@@ -325,9 +330,8 @@ export class WorkoutController {
     @Param('dayId') dayId: string,
     @Body() addExerciseDto: AddWorkoutExerciseDto,
   ) {
-    return this.workoutService.addWorkoutExercise(
+    return this.exerciseService.addWorkoutExercise(
       req.user.id,
-      planId,
       dayId,
       addExerciseDto,
     );
@@ -365,12 +369,7 @@ export class WorkoutController {
     @Param('dayId') dayId: string,
     @Param('exerciseId') exerciseId: string,
   ) {
-    await this.workoutService.deleteWorkoutExercise(
-      req.user.id,
-      planId,
-      dayId,
-      exerciseId,
-    );
+    await this.exerciseService.deleteWorkoutExercise(req.user.id, exerciseId);
   }
 
   // Exercise Set Endpoints
@@ -417,12 +416,10 @@ export class WorkoutController {
     @Param('exerciseId') exerciseId: string,
     @Body() addSetDto: AddExerciseSetDto,
   ) {
-    return this.workoutService.addExerciseSet(
+    return this.exerciseService.addExerciseSets(
       req.user.id,
-      planId,
-      dayId,
       exerciseId,
-      addSetDto,
+      [addSetDto], // Pass as an array of sets
     );
   }
 
@@ -464,13 +461,7 @@ export class WorkoutController {
     @Param('exerciseId') exerciseId: string,
     @Param('setId') setId: string,
   ) {
-    await this.workoutService.deleteExerciseSet(
-      req.user.id,
-      planId,
-      dayId,
-      exerciseId,
-      setId,
-    );
+    await this.exerciseService.deleteExerciseSet(req.user.id, setId);
   }
 
   // Workout Session Endpoints
@@ -499,7 +490,11 @@ export class WorkoutController {
     @Req() req: RequestWithUser,
     @Body() startDto: StartWorkoutSessionDto,
   ) {
-    return this.workoutService.startWorkoutSession(req.user.id, startDto);
+    return this.sessionService.startWorkoutSession(
+      req.user.id,
+      startDto.planId,
+      startDto.dayId,
+    );
   }
 
   @Put('sessions/:id/complete')
@@ -519,7 +514,7 @@ export class WorkoutController {
     @Req() req: RequestWithUser,
     @Param('id') sessionId: string,
   ) {
-    return this.workoutService.completeWorkoutSession(req.user.id, sessionId);
+    return this.sessionService.endWorkoutSession(req.user.id, sessionId);
   }
 
   @Get('sessions/active')
@@ -530,7 +525,7 @@ export class WorkoutController {
     type: WorkoutSessionResponseDto,
   })
   getActiveWorkoutSession(@Req() req: RequestWithUser) {
-    return this.workoutService.getActiveWorkoutSession(req.user.id);
+    return this.sessionService.getActiveWorkoutSession(req.user.id);
   }
 
   @Get('sessions/history')
@@ -541,7 +536,10 @@ export class WorkoutController {
     type: [WorkoutSessionResponseDto],
   })
   getUserWorkoutHistory(@Req() req: RequestWithUser) {
-    return this.workoutService.getUserWorkoutHistory(req.user.id);
+    // Using SessionService's getUserWorkoutSessions method with default pagination
+    return this.sessionService
+      .getUserWorkoutSessions(req.user.id)
+      .then(([sessions]) => sessions);
   }
 
   // Set Update Endpoint
@@ -577,7 +575,7 @@ export class WorkoutController {
     @Param('id') setId: string,
     @Body() updateDto: UpdateCompletedSetDto,
   ) {
-    return this.workoutService.updateCompletedSet(
+    return this.sessionService.updateCompletedSet(
       req.user.id,
       setId,
       updateDto,
@@ -593,23 +591,19 @@ export class WorkoutController {
     schema: {
       example: {
         totalWorkouts: 45,
-        workoutsToday: 1,
-        workoutsYesterday: 1,
-        workoutsThisWeek: 3,
-        workoutsThisMonth: 12,
+        totalWorkoutTime: 4320,
+        averageWorkoutTime: 96,
+        completedExercises: 180,
+        totalSets: 540,
         mostFrequentExercises: [
-          { exerciseName: 'Bench Press', count: 15 },
-          { exerciseName: 'Squat', count: 12 },
-        ],
-        volumeByBodyPart: [
-          { bodyPart: 'chest', totalVolume: 12500 },
-          { bodyPart: 'upper legs', totalVolume: 10800 },
+          { exerciseId: '1', exerciseName: 'Bench Press', count: 15 },
+          { exerciseId: '2', exerciseName: 'Squat', count: 12 },
         ],
       },
     },
   })
   getWorkoutAnalytics(@Req() req: RequestWithUser) {
-    return this.workoutService.getWorkoutAnalytics(req.user.id);
+    return this.analyticsService.getWorkoutStats(req.user.id);
   }
 
   @Get('exercises/:id/history')
@@ -618,22 +612,26 @@ export class WorkoutController {
     status: 200,
     description: 'Returns the history for a specific exercise.',
     schema: {
-      example: [
-        {
-          date: '2023-08-10T14:00:00.000Z',
-          sets: [
-            { reps: 12, weight: 50 },
-            { reps: 10, weight: 60 },
-          ],
-        },
-        {
-          date: '2023-08-03T15:00:00.000Z',
-          sets: [
-            { reps: 12, weight: 45 },
-            { reps: 10, weight: 55 },
-          ],
-        },
-      ],
+      example: {
+        exerciseId: '1',
+        exerciseName: 'Bench Press',
+        sessions: [
+          {
+            sessionId: 'a1b2c3',
+            date: '2023-08-10T14:00:00.000Z',
+            maxWeight: 60,
+            totalReps: 32,
+            totalSets: 3,
+          },
+          {
+            sessionId: 'b2c3d4',
+            date: '2023-08-03T15:00:00.000Z',
+            maxWeight: 55,
+            totalReps: 30,
+            totalSets: 3,
+          },
+        ],
+      },
     },
   })
   @ApiParam({
@@ -645,6 +643,120 @@ export class WorkoutController {
     @Req() req: RequestWithUser,
     @Param('id') exerciseId: string,
   ) {
-    return this.workoutService.getExerciseHistory(req.user.id, exerciseId);
+    return this.analyticsService.getExerciseProgress(req.user.id, exerciseId);
+  }
+
+  @Get('analytics/total')
+  @ApiOperation({ summary: 'Get total number of workouts' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns the total number of completed workouts',
+    schema: {
+      example: {
+        total: 45,
+      },
+    },
+  })
+  async getTotalWorkouts(@Req() req: RequestWithUser) {
+    const stats = await this.analyticsService.getWorkoutStats(req.user.id);
+    return { total: stats.totalWorkouts };
+  }
+
+  @Get('analytics/trends')
+  @ApiOperation({ summary: 'Get workout trends over time' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns workout trends by month',
+    schema: {
+      example: [
+        {
+          year: 2023,
+          month: 8,
+          workouts: 12,
+          totalDuration: 1080,
+          averageDuration: 90,
+        },
+        {
+          year: 2023,
+          month: 7,
+          workouts: 10,
+          totalDuration: 900,
+          averageDuration: 90,
+        },
+      ],
+    },
+  })
+  async getWorkoutTrends(@Req() req: RequestWithUser) {
+    return this.analyticsService.getSessionTrends(req.user.id);
+  }
+
+  @Get('analytics/personal-records')
+  @ApiOperation({ summary: 'Get personal records for exercises' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns personal records for exercises',
+    schema: {
+      example: [
+        {
+          exerciseId: '1',
+          exerciseName: 'Bench Press',
+          maxWeight: 100,
+          date: '2023-08-10T14:00:00.000Z',
+        },
+        {
+          exerciseId: '2',
+          exerciseName: 'Squat',
+          maxWeight: 150,
+          date: '2023-08-03T15:00:00.000Z',
+        },
+      ],
+    },
+  })
+  async getPersonalRecords(@Req() req: RequestWithUser) {
+    return this.analyticsService.getPersonalRecords(req.user.id);
+  }
+
+  // Rest Timer Endpoints
+  @Post('sets/:id/start-rest')
+  @ApiOperation({ summary: 'Start rest timer for a set' })
+  @ApiResponse({
+    status: 200,
+    description: 'Rest timer started successfully',
+    type: CompletedSet,
+  })
+  @ApiResponse({ status: 404, description: 'Set not found' })
+  @ApiParam({
+    name: 'id',
+    description: 'Set ID',
+    example: 'uuid-string',
+  })
+  async startSetRestTimer(
+    @Req() req: RequestWithUser,
+    @Param('id') setId: string,
+  ) {
+    return this.sessionService.startSetRestTimer(req.user.id, setId);
+  }
+
+  @Get('sets/:id/rest-remaining')
+  @ApiOperation({ summary: 'Get remaining rest time for a set' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns remaining rest time in seconds',
+    schema: {
+      example: {
+        remainingSeconds: 45,
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Set not found' })
+  @ApiParam({
+    name: 'id',
+    description: 'Set ID',
+    example: 'uuid-string',
+  })
+  async getSetRestTimeRemaining(@Param('id') setId: string) {
+    const remainingSeconds =
+      await this.sessionService.getSetRestTimeRemaining(setId);
+    return { remainingSeconds };
   }
 }

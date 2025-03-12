@@ -30,6 +30,7 @@ import { AddWorkoutExerciseDto } from './dto/add-workout-exercise.dto';
 import { AddExerciseSetDto } from './dto/add-exercise-set.dto';
 import { WorkoutSessionResponseDto } from './dto/workout-session.response.dto';
 import { AiChatService } from '../chat/services/ai-chat.service';
+import { SetType } from './entities/exercise-set.entity';
 
 @Injectable()
 export class WorkoutService {
@@ -132,12 +133,15 @@ export class WorkoutService {
 
             // Create sets for this exercise
             if (exerciseDto.sets && exerciseDto.sets.length > 0) {
-              for (const setDto of exerciseDto.sets) {
+              for (let i = 0; i < exerciseDto.sets.length; i++) {
+                const setDto = exerciseDto.sets[i];
                 const exerciseSet = this.exerciseSetRepository.create({
-                  setOrder: setDto.setOrder,
+                  setOrder: i + 1, // Automatic set ordering
                   reps: setDto.reps,
                   weight: setDto.weight,
                   notes: setDto.notes,
+                  type: setDto.type || SetType.NORMAL,
+                  restTimeSeconds: setDto.restTimeSeconds || 120,
                 });
                 workoutExercise.sets.push(exerciseSet);
               }
@@ -528,19 +532,32 @@ Important: The response should be ONLY the JSON object with no additional text o
           dayOrder: 1,
           exercises: [
             {
-              exerciseId: '0001', // This ID should be validated separately
+              exerciseId: '0001',
               exerciseOrder: 1,
               notes: 'Focus on proper form and control',
               sets: [
-                { setOrder: 1, reps: 12, weight: 0, notes: 'Warm-up set' },
-                { setOrder: 2, reps: 10, weight: 0, notes: 'Working set' },
-                { setOrder: 3, reps: 8, weight: 0, notes: 'Final set' },
+                {
+                  reps: 12,
+                  weight: 0,
+                  notes: 'Warm-up set',
+                  type: SetType.WARM_UP,
+                },
+                {
+                  reps: 10,
+                  weight: 0,
+                  notes: 'Working set',
+                  type: SetType.NORMAL,
+                },
+                {
+                  reps: 8,
+                  weight: 0,
+                  notes: 'Final set',
+                  type: SetType.NORMAL,
+                },
               ],
             },
-            // More exercises would be added here in a real fallback
           ],
         },
-        // More days would be added here in a real fallback
       ],
     };
   }
@@ -992,7 +1009,7 @@ Important: The response should be ONLY the JSON object with no additional text o
     return this.workoutExerciseRepository.save(workoutExercise);
   }
 
-  // Add a set to a workout exercise
+  // Add a set to a workout exercise with automatic set ordering
   async addExerciseSet(
     userId: string,
     planId: string,
@@ -1032,16 +1049,75 @@ Important: The response should be ONLY the JSON object with no additional text o
       );
     }
 
-    // Create the exercise set
+    // Get the current highest set order
+    const currentMaxOrder = workoutExercise.sets.reduce(
+      (max, set) => Math.max(max, set.setOrder),
+      0,
+    );
+
+    // Create the exercise set with automatic ordering
     const exerciseSet = this.exerciseSetRepository.create({
-      setOrder: setDto.setOrder,
+      setOrder: currentMaxOrder + 1,
       reps: setDto.reps,
       weight: setDto.weight,
       notes: setDto.notes,
+      type: setDto.type || SetType.NORMAL,
+      restTimeSeconds: setDto.restTimeSeconds || 120, // Default 2 minutes
       workoutExercise: workoutExercise,
     });
 
     return this.exerciseSetRepository.save(exerciseSet);
+  }
+
+  // Start rest timer for a set
+  async startSetRestTimer(
+    userId: string,
+    setId: string,
+  ): Promise<CompletedSet> {
+    const set = await this.completedSetRepository.findOne({
+      where: { id: setId },
+      relations: ['completedExercise', 'completedExercise.session'],
+    });
+
+    if (!set) {
+      throw new NotFoundException(`Set with ID ${setId} not found`);
+    }
+
+    // Verify the set belongs to an active session of the user
+    if (
+      !set.completedExercise?.session ||
+      set.completedExercise.session.user?.id !== userId ||
+      set.completedExercise.session.isCompleted
+    ) {
+      throw new BadRequestException('Cannot start rest timer for this set');
+    }
+
+    // Update the set with rest start time
+    set.restStartTime = new Date();
+    return this.completedSetRepository.save(set);
+  }
+
+  // Get remaining rest time for a set
+  async getSetRestTimeRemaining(setId: string): Promise<number> {
+    const set = await this.completedSetRepository.findOne({
+      where: { id: setId },
+    });
+
+    if (!set) {
+      throw new NotFoundException(`Set with ID ${setId} not found`);
+    }
+
+    if (!set.restStartTime) {
+      return set.restTimeSeconds;
+    }
+
+    const now = new Date();
+    const elapsedSeconds = Math.floor(
+      (now.getTime() - set.restStartTime.getTime()) / 1000,
+    );
+    const remainingSeconds = Math.max(0, set.restTimeSeconds - elapsedSeconds);
+
+    return remainingSeconds;
   }
 
   // Delete a workout plan
@@ -1248,5 +1324,14 @@ Important: The response should be ONLY the JSON object with no additional text o
     }
 
     await this.exerciseSetRepository.remove(set);
+  }
+
+  async getTotalWorkouts(userId: string): Promise<number> {
+    return this.workoutSessionRepository.count({
+      where: {
+        user: { id: userId },
+        isCompleted: true,
+      },
+    });
   }
 }
