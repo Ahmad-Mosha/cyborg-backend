@@ -11,7 +11,6 @@ import { Exclude } from 'class-transformer';
 import { ROLES, UserRole } from '../../../shared/constants/roles.constant';
 import { UserData } from './user-data.entity';
 import { ChatConversation } from '../../chat/entities/chat-conversation.entity';
-import { WorkoutPlan } from '@modules/workout/entities/workout-plan.entity';
 
 @Entity('users')
 export class User {
@@ -37,8 +36,7 @@ export class User {
   @OneToMany(() => ChatConversation, (conversation) => conversation.user)
   chatConversations: ChatConversation[];
 
-  @OneToMany(() => WorkoutPlan, (workoutPlan) => workoutPlan.user)
-  workoutPlans: WorkoutPlan[];
+  
 
   @Column('text', {
     default: JSON.stringify([ROLES.USER]),

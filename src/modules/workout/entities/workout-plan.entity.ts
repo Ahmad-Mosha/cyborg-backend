@@ -1,35 +1,56 @@
-import { User } from '@modules/users/entities/user.entity';
 import {
-  Column,
   Entity,
-  JoinColumn,
+  PrimaryGeneratedColumn,
+  Column,
   ManyToOne,
   OneToMany,
-  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
+import { User } from '../../users/entities/user.entity';
 import { WorkoutDay } from './workout-day.entity';
 
-@Entity()
+export enum PlanType {
+  CUSTOM = 'custom',
+  AI_GENERATED = 'ai_generated',
+}
+
+@Entity('workout_plans')
 export class WorkoutPlan {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column()
   name: string;
 
-  @Column()
+  @Column({ nullable: true })
   description: string;
 
-  @Column()
-  createdAt: Date;
+  @Column({
+    type: 'text',
+    default: PlanType.CUSTOM,
+    transformer: {
+      to: (value: PlanType) => value,
+      from: (value: string) => value as PlanType,
+    },
+  })
+  type: PlanType;
 
-  @Column()
-  updatedAt: Date;
+  @Column({ default: true })
+  isActive: boolean;
 
-  @ManyToOne(() => User, (user) => user.workoutPlans)
-  @JoinColumn({ name: 'userId' })
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
   user: User;
 
-  @OneToMany(() => WorkoutDay, (workoutDay) => workoutDay.workoutPlan)
-  workoutDays: WorkoutDay[];
+  @OneToMany(() => WorkoutDay, (day) => day.plan, {
+    cascade: ['insert', 'update', 'remove'],
+    onDelete: 'CASCADE',
+  })
+  days: WorkoutDay[];
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }
