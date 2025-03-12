@@ -44,7 +44,7 @@ import { DuplicateMealsDto } from './dto/duplicate-meals.dto';
 import { NutritionCalculatorService } from './services/nutrition-calculator.service';
 import { MarkFoodEatenDto } from './dto/mark-foodEaten.dto';
 
-@ApiTags('nutrition')
+@ApiTags('Nutrition')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('nutrition')
