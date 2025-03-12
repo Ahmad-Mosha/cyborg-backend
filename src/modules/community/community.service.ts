@@ -22,7 +22,7 @@ export class CommunityService {
   ) {}
 
   // Posts methods
-  async createPost(user: User, createPostDto: CreatePostDto) {
+async createPost(user: User, createPostDto: CreatePostDto) {
     const post = this.postRepository.create({
       ...createPostDto,
       author: user,
@@ -162,74 +162,62 @@ export class CommunityService {
 }
 
   // Likes methods
-    async createLike(user: User, createLikeDto: CreateLikeDto) {
-        const { targetType, targetId } = createLikeDto;
-        const postId = targetType === LikeTargetType.POST ? targetId : undefined;
-        const commentId = targetType === LikeTargetType.COMMENT ? targetId : undefined;
+  async toggleLike(user: User, createLikeDto: CreateLikeDto) {
+    const { targetType, targetId } = createLikeDto;
+    const postId = targetType === LikeTargetType.POST ? targetId : undefined;
+    const commentId = targetType === LikeTargetType.COMMENT ? targetId : undefined;
 
     // Validate target exists
     if (targetType === LikeTargetType.POST) {
-        await this.getPost(postId);
+      await this.getPost(postId);
     } else {
-        const comment = await this.commentRepository.findOne({
+      const comment = await this.commentRepository.findOne({
         where: { id: commentId }
-});
-        if (!comment) {
-            throw new NotFoundException('Comment not found');
+      });
+      if (!comment) {
+        throw new NotFoundException('Comment not found');
+      }
     }
-    }
+
     const existingLike = await this.likeRepository.findOne({
-        where: targetType === LikeTargetType.POST
+      where: targetType === LikeTargetType.POST
         ? { userId: user.id, postId }
         : { userId: user.id, commentId }
     });
 
+    // If like exists, remove it
     if (existingLike) {
-        throw new BadRequestException('You have already liked this item');
+      await this.likeRepository.remove(existingLike);
+      
+      // Update likes count ---
+      if (targetType === LikeTargetType.POST) {
+        await this.postRepository.decrement({ id: postId }, 'likesCount', 1);
+      } else {
+        await this.commentRepository.decrement({ id: commentId }, 'likesCount', 1);
+      }
+
+      return { liked: false };
     }
 
+    // If like msh exist e3melo
     const like = this.likeRepository.create({
-        user,
-        userId: user.id,
-        targetType,
-        ...(targetType === LikeTargetType.POST ? { postId } : { commentId })
+      user,
+      userId: user.id,
+      targetType,
+      ...(targetType === LikeTargetType.POST ? { postId } : { commentId })
     });
 
     await this.likeRepository.save(like);
 
-    // Update likes count
+    // Update likes count  +++
     if (targetType === LikeTargetType.POST) {
-        await this.postRepository.increment({ id: postId }, 'likesCount', 1);
+      await this.postRepository.increment({ id: postId }, 'likesCount', 1);
     } else {
-        await this.commentRepository.increment({ id: commentId }, 'likesCount', 1);
+      await this.commentRepository.increment({ id: commentId }, 'likesCount', 1);
     }
 
-    return like;
-}
-
-    async deleteLike(id: string, user: User) {
-        const like = await this.likeRepository.findOne({
-        where: { id },
-        relations: ['post', 'comment']
-    });
-
-    if (!like) {
-        throw new NotFoundException('Like not found');
-    }
-
-    if (like.userId !== user.id) {
-        throw new UnauthorizedException('You can only remove your own likes');
-    }
-
-    await this.likeRepository.remove(like);
-
-    // hena Update likes count
-    if (like.targetType === LikeTargetType.POST) {
-        await this.postRepository.decrement({ id: like.postId }, 'likesCount', 1);
-    } else {
-        await this.commentRepository.decrement({ id: like.commentId }, 'likesCount', 1);
-    }
-}
+    return { liked: true };
+  }
 
   // Admin methods lesa 3ayza at2aked eno el user admin
   /*  async togglePin(id: string) {

@@ -6,8 +6,33 @@ import axios from 'axios';
 import { Food } from './entities/food.entity';
 import { User } from '../users/entities/user.entity';
 
+interface NutrientValues {
+  calories?: number;
+  protein?: number;
+  carbohydrates?: number;
+  fat?: number;
+  fiber?: number;
+  sugar?: number;
+  sodium?: number;
+  cholesterol?: number;
+}
+
 @Injectable()
 export class FoodService {
+  async getFoodById(foodId: string): Promise<Food> {
+    const food = await this.foodRepository.findOne({
+      where: { id: foodId },
+    });
+
+    if (!food) {
+      throw new HttpException(
+        `Food with ID ${foodId} not found`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    return food;
+  }
   private readonly apiKey: string;
   private readonly baseUrl = 'https://api.nal.usda.gov/fdc/v1';
 
@@ -59,69 +84,74 @@ export class FoodService {
     }
   }
 
-  private mapUsdaFoodToEntity(usdaFood: any): Partial<Food> {
-    const nutrients = usdaFood.foodNutrients || [];
-
-    const getNutrientAmount = (targetId: number) => {
-      // Find nutrient by both nutrientId and id
-      const nutrient = nutrients.find(
-        (n) =>
-          n.nutrientId === targetId ||
-          (n.nutrient && n.nutrient.id === targetId),
-      );
-      // Return either the amount or value property
-      return nutrient?.amount || nutrient?.value || 0;
-    };
-
-    return {
-      name: usdaFood.description || usdaFood.foodDescription || '',
-      description: usdaFood.additionalDescriptions || '',
-      usdaId: (usdaFood.fdcId || usdaFood.fcdId)?.toString(),
-      servingSize: 100,
-      servingUnit: 'g',
-      fat: getNutrientAmount(1004),
-      cholesterol: getNutrientAmount(1253),
-      sodium: getNutrientAmount(1093),
-      potassium: getNutrientAmount(1092),
-      carbohydrates: getNutrientAmount(1005),
-      fiber: getNutrientAmount(1079),
-      sugar: getNutrientAmount(2000),
-      protein: getNutrientAmount(1003),
-      vitamin_a: getNutrientAmount(1104),
-      vitamin_c: getNutrientAmount(1162),
-      calcium: getNutrientAmount(1087),
-      iron: getNutrientAmount(1089),
-    };
-  }
-
   async searchFoods(query: string, page = 1, pageSize = 10) {
     const endpoint = '/foods/search';
     const params = {
       query,
       pageSize: Math.max(1, pageSize),
       pageNumber: Math.max(0, page - 1),
-      dataType: 'Survey (FNDDS), Foundation, SR Legacy',
+      dataType: ['Survey (FNDDS)', 'Foundation', 'SR Legacy'].join(','),
       sortBy: 'dataType.keyword',
       sortOrder: 'asc',
     };
 
     try {
       const data = await this.callUsdaApi(endpoint, params);
+      
+      if (!data.foods || data.foods.length === 0) {
+        return {
+          foods: [],
+          totalHits: 0,
+          currentPage: page,
+          totalPages: 0,
+        };
+      }
 
-      // Add debug logging
-      console.log(
-        'First food item from search:',
-        JSON.stringify(data.foods[0], null, 2),
-      );
-      console.log(
-        'First few nutrients:',
-        JSON.stringify(data.foods[0]?.foodNutrients?.slice(0, 3), null, 2),
-      );
+      // Map nutrient IDs to their common names
+      const nutrientMap = {
+        1003: 'protein',
+        1004: 'fat',
+        1005: 'carbohydrates',
+        1008: 'calories',
+        1051: 'water',
+        1079: 'fiber',
+        2000: 'sugar',
+        1093: 'sodium',
+        1253: 'cholesterol',
+      };
 
-      const mappedFoods = data.foods.map((food: any) => {
-        // Use the same mapping function for consistency
-        return this.mapUsdaFoodToEntity(food);
-      });
+      const mappedFoods = await Promise.all(data.foods.map(async (food) => {
+        // Get detailed food information for each food
+        const detailedFood = await this.callUsdaApi(`/food/${food.fdcId}`);
+        
+        // Create a nutrient value map
+        const nutrientValues: NutrientValues = {};
+        detailedFood.foodNutrients?.forEach(nutrient => {
+          const nutrientId = nutrient.nutrient?.id || nutrient.nutrientId;
+          const nutrientName = nutrientMap[nutrientId];
+          if (nutrientName) {
+            nutrientValues[nutrientName] = nutrient.amount || 0;
+          }
+        });
+
+        // Create the food entity data
+        const foodData: Partial<Food> = {
+          name: detailedFood.description || food.description,
+          description: detailedFood.additionalDescriptions || food.additionalDescriptions,
+          usdaId: detailedFood.fdcId?.toString(),
+          servingSize: 100, // Base serving size
+          servingUnit: 'g',
+          fat: nutrientValues.fat || 0,
+          cholesterol: nutrientValues.cholesterol || 0,
+          sodium: nutrientValues.sodium || 0,
+          carbohydrates: nutrientValues.carbohydrates || 0,
+          fiber: nutrientValues.fiber || 0,
+          sugar: nutrientValues.sugar || 0,
+          protein: nutrientValues.protein || 0
+        };
+
+        return foodData;
+      }));
 
       return {
         foods: mappedFoods,
@@ -139,6 +169,44 @@ export class FoodService {
         HttpStatus.BAD_REQUEST,
       );
     }
+  }
+
+  private async mapUsdaFoodToEntity(usdaFood: any): Promise<Partial<Food>> {
+    const nutrients = usdaFood.foodNutrients || [];
+    
+    const getNutrientAmount = (ids: number[]) => {
+      for (const id of ids) {
+        const nutrient = nutrients.find(
+          (n) => n.nutrient?.id === id || n.nutrientId === id
+        );
+        if (nutrient && (nutrient.amount || nutrient.value)) {
+          return nutrient.amount || nutrient.value;
+        }
+      }
+      return 0;
+    };
+
+    const foodData: Partial<Food> = {
+      name: usdaFood.description || usdaFood.foodDescription || '',
+      description: usdaFood.additionalDescriptions || '',
+      usdaId: (usdaFood.fdcId || usdaFood.fcdId)?.toString(),
+      servingSize: 100,
+      servingUnit: 'g',
+      fat: getNutrientAmount([1004]), // Total fat
+      cholesterol: getNutrientAmount([1253]), // Cholesterol
+      sodium: getNutrientAmount([1093]), // Sodium
+      potassium: getNutrientAmount([1092]), // Potassium
+      carbohydrates: getNutrientAmount([1005]), // Total carbohydrates
+      fiber: getNutrientAmount([1079]), // Fiber
+      sugar: getNutrientAmount([2000]), // Total sugars
+      protein: getNutrientAmount([1003]), // Protein
+      vitamin_a: getNutrientAmount([1104, 1106]), // Vitamin A
+      vitamin_c: getNutrientAmount([1162]), // Vitamin C
+      calcium: getNutrientAmount([1087]), // Calcium
+      iron: getNutrientAmount([1089]) // Iron
+    };
+
+    return foodData;
   }
 
   async getFoodDetails(fdcId: string) {
@@ -251,5 +319,17 @@ export class FoodService {
     if (result.affected === 0) {
       throw new HttpException('Food not found', HttpStatus.NOT_FOUND);
     }
+  }
+
+  async getFoodByUsdaId(usdaId: string) {
+    const food = await this.foodRepository.findOne({
+      where: { usdaId: usdaId }
+    });
+
+    if (!food) {
+      throw new HttpException('Food not found', HttpStatus.NOT_FOUND);
+    }
+
+    return food;
   }
 }

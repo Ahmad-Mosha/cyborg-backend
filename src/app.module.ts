@@ -10,6 +10,8 @@ import { ChatModule } from './modules/chat/chat.module';
 import { databaseConfig } from './config/database.config';
 import { RecipeModule } from './modules/recipe/recipe.module';
 import { WorkoutModule } from './modules/workout/workout.module';
+import { NutritionModule } from '@modules/nutrition/nutrition.module';
+
 
 @Module({
   imports: [
@@ -23,6 +25,7 @@ import { WorkoutModule } from './modules/workout/workout.module';
     CommunityModule,
     ExercisesModule,
     ChatModule,
+    NutritionModule,
     RecipeModule,
     WorkoutModule,
   ],

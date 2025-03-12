@@ -6,6 +6,7 @@ import {
   JoinColumn,
   Index
 } from 'typeorm';
+import { Expose } from 'class-transformer';
 import { BaseEntity } from './base.entity';
 import { User } from '../../users/entities/user.entity';
 import { Comment } from './comment.entity';
@@ -30,21 +31,25 @@ export enum PostStatus {
 export class Post extends BaseEntity {
   @Column()
   @Index()
+  @Expose()
   title: string;
 
   @Column('text')
+  @Expose()
   content: string;
 
   @Column({
     type: 'varchar',
     default: PostType.GENERAL
   })
+  @Expose()
   type: PostType;
 
   @Column({
     type: 'varchar',
     default: PostStatus.PUBLISHED
   })
+  @Expose()
   status: PostStatus;
 
   @Column('simple-array', { default: '' })

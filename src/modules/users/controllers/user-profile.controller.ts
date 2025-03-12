@@ -6,6 +6,7 @@ import {
   Body,
   UseGuards,
   Request,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -17,11 +18,13 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { UserProfileService } from '../services/user-profile.service';
 import { UpdateProfileDto } from '../dto/update-profile.dto';
 import { User } from '../entities/user.entity';
+import { ResponseInterceptor } from '@shared/interceptors/response.interceptor';
 
 @Controller('user-profile')
 @ApiTags('User Profile')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
+@UseInterceptors(ResponseInterceptor)
 export class UserProfileController {
   constructor(private readonly userProfileService: UserProfileService) {}
 
