@@ -465,11 +465,62 @@ export class WorkoutController {
   }
 
   // Workout Session Endpoints
-  @Post('sessions/start')
-  @ApiOperation({ summary: 'Start a new workout session' })
+  @Post('plans/:planId/days/:dayId/sessions/start')
+  @ApiOperation({
+    summary: 'Start a new workout session from a specific plan and day',
+  })
   @ApiResponse({
     status: 201,
     description: 'The workout session has been started.',
+    type: WorkoutSessionResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'User already has an active session',
+  })
+  @ApiParam({
+    name: 'planId',
+    description: 'Workout plan ID',
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  })
+  @ApiParam({
+    name: 'dayId',
+    description: 'Workout day ID',
+    example: 'b2c3d4e5-f6g7-8901-bcde-fg2345678901',
+  })
+  @ApiBody({
+    type: StartWorkoutSessionDto,
+    examples: {
+      example1: {
+        summary: 'Start a workout session from a plan',
+        description: 'Start a session using an existing workout plan and day',
+        value: {
+          name: 'Monday Push Session',
+          notes: 'Feeling good today!',
+        },
+      },
+    },
+  })
+  startWorkoutSessionFromPlan(
+    @Req() req: RequestWithUser,
+    @Param('planId') planId: string,
+    @Param('dayId') dayId: string,
+    @Body() sessionDto: StartWorkoutSessionDto,
+  ) {
+    return this.sessionService.startWorkoutSession(
+      req.user.id,
+      planId,
+      dayId,
+      sessionDto.name,
+      sessionDto.notes,
+    );
+  }
+
+  @Post('sessions/start')
+  @ApiOperation({ summary: 'Start a new freestyle workout session' })
+  @ApiResponse({
+    status: 201,
+    description: 'The freestyle workout session has been started.',
     type: WorkoutSessionResponseDto,
   })
   @ApiResponse({
@@ -480,20 +531,25 @@ export class WorkoutController {
     type: StartWorkoutSessionDto,
     examples: {
       example1: {
-        summary: 'Start a workout session from a plan',
-        description: 'Start a session using an existing workout plan and day',
-        value: startWorkoutSessionExample,
+        summary: 'Start a freestyle workout session',
+        description: 'Start a session without using an existing plan',
+        value: {
+          name: 'Freestyle Workout',
+          notes: 'Trying something new today',
+        },
       },
     },
   })
-  startWorkoutSession(
+  startFreestyleWorkoutSession(
     @Req() req: RequestWithUser,
-    @Body() startDto: StartWorkoutSessionDto,
+    @Body() sessionDto: StartWorkoutSessionDto,
   ) {
     return this.sessionService.startWorkoutSession(
       req.user.id,
-      startDto.planId,
-      startDto.dayId,
+      null,
+      null,
+      sessionDto.name,
+      sessionDto.notes,
     );
   }
 

@@ -35,6 +35,8 @@ export class SessionService {
     userId: string,
     planId?: string,
     dayId?: string,
+    name?: string,
+    notes?: string,
   ): Promise<WorkoutSession> {
     // Check if the user already has an active session
     const activeSession = await this.getActiveWorkoutSession(userId);
@@ -76,6 +78,8 @@ export class SessionService {
       plan: plan ? { id: plan.id } : null,
       day: day ? { id: day.id } : null,
       exercises: [],
+      name: name || (day ? day.name : 'Freestyle Workout'),
+      notes: notes || '',
     });
 
     await this.workoutSessionRepository.save(session);
