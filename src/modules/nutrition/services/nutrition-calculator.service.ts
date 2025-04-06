@@ -22,6 +22,9 @@ export class NutritionCalculatorService {
   }
 
   calculateDailyNutrition(date: Date, mealFoods: MealFood[]): DailyNutritionSummary {
+    console.log('Calculating nutrition for date:', date);
+    console.log('Number of meal foods:', mealFoods.length);
+
     const summary: DailyNutritionSummary = {
       date: date,
       summary: {
@@ -51,12 +54,16 @@ export class NutritionCalculatorService {
       mealDistribution: []
     };
 
-    // Group foods by meal
     const mealSummaries = new Map<string, SimplifiedMeal>();
     let totalCaloriesEaten = 0;
     let targetCalories = 0;
 
     for (const mealFood of mealFoods) {
+      if (!mealFood.food || !mealFood.meal) {
+        console.log('Skipping meal food due to missing food or meal:', mealFood);
+        continue;
+      }
+
       const { food, meal } = mealFood;
       
       if (!mealSummaries.has(meal.id)) {
@@ -80,27 +87,22 @@ export class NutritionCalculatorService {
       }
 
       const currentMeal = mealSummaries.get(meal.id);
-      
-      // Calculate nutrients for this food
       const nutrients = this.calculateNutrients(food, mealFood.servingSize);
 
       if (mealFood.eaten) {
         totalCaloriesEaten += nutrients.calories;
         currentMeal.calories.actual += nutrients.calories;
         
-        // Add to main nutrients
         summary.summary.mainNutrients.protein.amount += nutrients.protein;
         summary.summary.mainNutrients.carbs.amount += nutrients.carbohydrates;
         summary.summary.mainNutrients.fat.amount += nutrients.fat;
         
-        // Add to additional nutrients
         summary.summary.additionalNutrients.fiber.amount += nutrients.fiber;
         summary.summary.additionalNutrients.sugar.amount += nutrients.sugar;
         summary.summary.additionalNutrients.sodium.amount += nutrients.sodium;
         summary.summary.additionalNutrients.cholesterol.amount += nutrients.cholesterol;
       }
 
-      // Add food details to meal
       currentMeal.foods.push({
         name: food.name,
         amount: `${mealFood.servingSize}${mealFood.servingUnit}`,
@@ -109,45 +111,26 @@ export class NutritionCalculatorService {
       });
     }
 
-    // Update summary
     summary.summary.calories = {
       target: targetCalories,
       eaten: totalCaloriesEaten,
       remaining: targetCalories - totalCaloriesEaten
     };
 
-    // Calculate nutrient percentages
     if (totalCaloriesEaten > 0) {
-      summary.summary.mainNutrients.protein.percentage = (summary.summary.mainNutrients.protein.amount * 4 / totalCaloriesEaten) * 100;
-      summary.summary.mainNutrients.carbs.percentage = (summary.summary.mainNutrients.carbs.amount * 4 / totalCaloriesEaten) * 100;
-      summary.summary.mainNutrients.fat.percentage = (summary.summary.mainNutrients.fat.amount * 9 / totalCaloriesEaten) * 100;
+      summary.summary.mainNutrients.protein.percentage = 
+        (summary.summary.mainNutrients.protein.amount * 4 / totalCaloriesEaten) * 100;
+      summary.summary.mainNutrients.carbs.percentage = 
+        (summary.summary.mainNutrients.carbs.amount * 4 / totalCaloriesEaten) * 100;
+      summary.summary.mainNutrients.fat.percentage = 
+        (summary.summary.mainNutrients.fat.amount * 9 / totalCaloriesEaten) * 100;
     }
 
-    // Calculate progress percentage
-    summary.progress.percentage = (summary.progress.mealsEaten / summary.progress.totalMeals) * 100;
+    summary.progress.percentage = 
+      summary.progress.totalMeals > 0 ? 
+      (summary.progress.mealsEaten / summary.progress.totalMeals) * 100 : 0;
 
-    // Add meals to summary
     summary.meals = Array.from(mealSummaries.values());
-
-    // Add meal distribution information
-    if (mealFoods.length > 0 && mealFoods[0].meal.mealPlan) {
-      const mealPlan = mealFoods[0].meal.mealPlan;
-      if (mealPlan.targetCalories && mealPlan.calorieDistribution) {
-        const distribution = this.calculateMealDistribution(
-          mealPlan.targetCalories,
-          mealPlan.calorieDistribution
-        );
-        
-        summary.mealDistribution = distribution.summary.distribution.map(meal => ({
-          mealName: meal.name,
-          targetCalories: meal.calories,
-          actualCalories: mealSummaries.get(meal.name)?.calories.actual || 0,
-          percentage: meal.percentage,
-          deficit: (mealSummaries.get(meal.name)?.calories.actual || 0) - meal.calories,
-          nutrients: meal.macronutrients
-        }));
-      }
-    }
 
     return summary;
   }

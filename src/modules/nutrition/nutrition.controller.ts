@@ -43,6 +43,7 @@ import { DailyNutritionSummary } from './interfaces/daily-nutrition-summary.inte
 import { DuplicateMealsDto } from './dto/duplicate-meals.dto';
 import { NutritionCalculatorService } from './services/nutrition-calculator.service';
 import { MarkFoodEatenDto } from './dto/mark-foodEaten.dto';
+import { FoodSearchDto } from '@modules/food/dto/food-search.dto';
 
 @ApiTags('nutrition')
 @ApiBearerAuth()
@@ -160,28 +161,32 @@ export class NutritionController {
     return this.mealService.addFoodToMeal(mealId, dto, req.user);
   }
 
-  @Delete('meal-foods/:id')
+  @Delete('meals/:mealId/foods/:foodId')
   @ApiOperation({ summary: 'Remove food from meal' })
-  @ApiParam({ name: 'id', type: String, description: 'Meal food ID' })
+  @ApiParam({ name: 'mealId', type: String, description: 'Meal ID' })
+  @ApiParam({ name: 'foodId', type: String, description: 'Food ID' })
   @ApiResponse({ status: HttpStatus.NO_CONTENT, description: 'Food removed from meal successfully' })
   @ApiNotFoundResponse({ description: 'Food not found in meal' })
   async removeFoodFromMeal(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('mealId', ParseUUIDPipe) mealId: string,
+    @Param('foodId', ParseUUIDPipe) foodId: string,
     @Request() req
   ): Promise<void> {
-    return this.mealService.removeFoodFromMeal(id, req.user);
+    return this.mealService.removeFoodFromMeal(mealId, foodId, req.user);
   }
 
-  @Put('meal-foods/:id/toggle-eaten')
+  @Put('meals/:mealId/foods/:foodId/toggle-eaten')
   @ApiOperation({ summary: 'Toggle food eaten status' })
-  @ApiParam({ name: 'id', type: String, description: 'Meal food ID' })
+  @ApiParam({ name: 'mealId', type: String, description: 'Meal ID' })
+  @ApiParam({ name: 'foodId', type: String, description: 'Food ID' })
   @ApiOkResponse({ description: 'Food status toggled successfully', type: Boolean })
   @ApiNotFoundResponse({ description: 'Food not found in meal' })
   async toggleFoodEaten(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('mealId', ParseUUIDPipe) mealId: string,
+    @Param('foodId', ParseUUIDPipe) foodId: string,
     @Request() req
   ): Promise<boolean> {
-    return this.mealService.toggleFoodEaten(id, req.user);
+    return this.mealService.toggleFoodEaten(mealId, foodId, req.user);
   }
 
   @Put('meals/:id/toggle-eaten')
@@ -204,19 +209,62 @@ export class NutritionController {
     @Request() req
   ): Promise<DailyNutritionSummary> {
     try {
-      // Get all meal foods for the specified date
       const targetDate = new Date(date);
-      const meal = await this.mealService.getMealsByDate(targetDate, req.user);
-      const mealFoods = meal.flatMap(m => m.mealFoods || []);
+      console.log('Getting nutrition for date:', targetDate);
 
-      return await this.nutritionCalculator.calculateDailyNutrition(
+      const meals = await this.mealService.getMealsByDate(targetDate, req.user);
+      console.log(`Found ${meals.length} meals`);
+
+      if (!meals || meals.length === 0) {
+        console.log('No meals found for this date');
+        return {
+          date: targetDate,
+          summary: {
+            calories: {
+              target: 0,
+              eaten: 0,
+              remaining: 0
+            },
+            mainNutrients: {
+              protein: { amount: 0, unit: 'g', percentage: 0 },
+              carbs: { amount: 0, unit: 'g', percentage: 0 },
+              fat: { amount: 0, unit: 'g', percentage: 0 }
+            },
+            additionalNutrients: {
+              fiber: { amount: 0, unit: 'g' },
+              sugar: { amount: 0, unit: 'g' },
+              sodium: { amount: 0, unit: 'mg' },
+              cholesterol: { amount: 0, unit: 'mg' }
+            }
+          },
+          meals: [],
+          progress: {
+            mealsEaten: 0,
+            totalMeals: meals.length,
+            percentage: 0
+          },
+          mealDistribution: []
+        };
+      }
+
+      const mealFoods = meals.flatMap(meal => meal.mealFoods || []);
+      console.log(`Total meal foods: ${mealFoods.length}`);
+
+      const summary = await this.nutritionCalculator.calculateDailyNutrition(
         targetDate,
         mealFoods
       );
+
+      if (meals[0]?.mealPlan) {
+        summary.summary.calories.target = meals[0].mealPlan.targetCalories || 0;
+      }
+
+      return summary;
+
     } catch (error) {
-      this.logger.error('Failed to get daily nutrition', error);
+      console.error('Error in getDailyNutrition:', error);
       throw new HttpException(
-        'Failed to get daily nutrition',
+        'Failed to get daily nutrition: ' + error.message,
         HttpStatus.INTERNAL_SERVER_ERROR
       );
     }
