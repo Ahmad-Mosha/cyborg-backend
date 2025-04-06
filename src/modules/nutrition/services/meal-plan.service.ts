@@ -78,22 +78,36 @@ export class MealPlanService {
     return mealPlan;
   }
 
-  async updateMealPlan(id: string, dto: UpdateMealPlanDto, user: User): Promise<MealPlan> {
-    return await this.dataSource.transaction(async manager => {
-      const mealPlan = await this.getMealPlanById(id, user);
+  async updateMealPlan(id: string, updateMealPlanDto: UpdateMealPlanDto, user: User): Promise<MealPlan> {
+    // Check if the meal plan exists and belongs to the user
+    const existingPlan = await this.getMealPlanById(id, user);
+    
+    if (!existingPlan) {
+      throw new HttpException('Meal plan not found', HttpStatus.NOT_FOUND);
+    }
 
-      if (dto.calorieDistribution) {
-        if (!this.validateCalorieDistribution(dto.calorieDistribution)) {
-          throw new HttpException(
-            'Total percentage of calorie distribution must equal 100%',
-            HttpStatus.BAD_REQUEST
-          );
-        }
-      }
+    // Validate that there's at least one field to update
+    if (Object.keys(updateMealPlanDto).length === 0) {
+      throw new HttpException('No update data provided', HttpStatus.BAD_REQUEST);
+    }
 
-      Object.assign(mealPlan, dto);
-      return await manager.save(mealPlan);
-    });
+    try {
+      // Update only the provided fields while keeping the same ID
+      const updatedPlan = await this.mealPlanRepository.save({
+        ...existingPlan,
+        ...updateMealPlanDto,
+        id: existingPlan.id, // Ensure we keep the same ID
+        user: { id: user.id } // Maintain user relationship
+      });
+
+      return await this.getMealPlanById(updatedPlan.id, user);
+    } catch (error) {
+      console.error('Error updating meal plan:', error);
+      throw new HttpException(
+        'Failed to update meal plan',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
   }
 
   private validateCalorieDistribution(calorieDistribution: any[]): boolean {
