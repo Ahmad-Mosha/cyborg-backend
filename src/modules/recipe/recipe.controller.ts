@@ -1,7 +1,8 @@
-import { Controller, Get, Query, Param, ValidationPipe } from '@nestjs/common';
-import {ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery} from '@nestjs/swagger';
+import { Controller, Get, Query, Param, ValidationPipe, Post, Body, UploadedFile, UseInterceptors, BadRequestException } from '@nestjs/common';
+import {ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiConsumes} from '@nestjs/swagger';
 import { RecipeService } from './recipe.service';
-import { SearchRecipeDto, RecipeDto, IngredientSearchDto } from './dto/recipe.dto';
+import { SearchRecipeDto, RecipeDto, IngredientSearchDto, ImageAnalysisByUrlDto, FoodAnalysisResponseDto } from './dto/recipe.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('Recipes')
 @Controller('recipes')
@@ -57,6 +58,27 @@ export class RecipeController {
     @Query('stepBreakdown') stepBreakdown?: boolean,
   ) {
     return this.recipeService.getAnalyzedInstructions(id, stepBreakdown);
+}
+
+
+@Post('analyze/url')
+@ApiOperation({ summary: 'Analyze food image by URL' })
+@ApiResponse({ status: 200, description: 'Returns analysis of food image', type: FoodAnalysisResponseDto })
+async analyzeImageByUrl(@Body() imageDto: ImageAnalysisByUrlDto) {
+  return this.recipeService.analyzeImageByUrl(imageDto.imageUrl);
+}
+
+
+@Post('analyze/file')
+@ApiOperation({ summary: 'Analyze food image by file upload' })
+@ApiConsumes('multipart/form-data')
+@ApiResponse({ status: 200, description: 'Returns analysis of food image', type: FoodAnalysisResponseDto })
+@UseInterceptors(FileInterceptor('file'))  
+async analyzeImageByFile(@UploadedFile() file) {
+  if (!file) {
+    throw new BadRequestException('File is required');
   }
+  return this.recipeService.analyzeImageByFile(file.buffer);
+}
 }
 
