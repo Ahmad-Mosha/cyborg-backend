@@ -180,3 +180,34 @@ export class RecipeInstructionsDto {
   stepBreakdown?: boolean;
 }
 
+
+export class ImageAnalysisByUrlDto {
+  @ApiProperty({ required: true, description: 'URL of the food image to analyze' })
+  @IsString()
+  imageUrl: string;
+}
+
+export class ImageAnalysisByFileDto {
+  @ApiProperty({ required: true, description: 'Food image file to analyze', type: 'string', format: 'binary' })
+  file: any;
+}
+
+export class FoodAnalysisResponseDto {
+  @ApiProperty({ description: 'Recognized food category' })
+  category: string;
+
+  @ApiProperty({ description: 'Probability of recognition accuracy' })
+  probability: number;
+
+  @ApiProperty({ description: 'Possible recipes matching the image' })
+  recipes: RecipeDto[];
+
+  @ApiProperty({ description: 'Nutrition information for recognized food' })
+  nutrition: {
+    calories: string;
+    fat: string;
+    protein: string;
+    carbs: string;
+  };
+}
+
