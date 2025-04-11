@@ -114,25 +114,6 @@ export class RecipeService {
     }
   }
 
-  //async getRandomRecipes(tags?: string[]) {
-  //const params = {
-  //  apiKey: this.apiKey,
-  //try {
-  //  return await lastValueFrom(
-  //   this.httpService.get(`${this.baseUrl}/recipes/random`, { params }).pipe(
-  //      map(res => res.data.recipes),
-  //      catchError(error => {
-  //        console.error('API Error:', error.response?.data || error.message);
-  //        return throwError(() => new BadRequestException('Failed to fetch random recipes'));
-  //      })
-   //   )
-   // );
-  //} catch (error) {
-   // throw new BadRequestException(error.message);
-  //}
-//}
-
-
   async getSimilarRecipes(id: number) {
     const params = {
       apiKey: this.apiKey,
@@ -203,4 +184,58 @@ export class RecipeService {
 
     return categories;
   }
+// scan food image by URL or file upload 
+// using the Spoonacular API
+
+async analyzeImageByUrl(imageUrl: string) {
+  const params = {
+    apiKey: this.apiKey,
+    imageUrl: imageUrl,
+  };
+
+  try {
+    return await lastValueFrom(
+      this.httpService.get(`${this.baseUrl}/food/images/analyze`, { params }).pipe(
+        map(res => res.data),
+        catchError(error => {
+          console.error('API Error:', error.response?.data || error.message);
+          return throwError(() => new BadRequestException('Failed to analyze food image by URL'));
+        })
+      )
+    );
+  } catch (error) {
+    throw new BadRequestException(error.message);
+  }
+}
+
+async analyzeImageByFile(file: Buffer) {
+  const formData = new FormData();
+  formData.append('file', new Blob([file]), 'food.jpg');
+
+  const headers = {
+    'Content-Type': 'multipart/form-data',
+  };
+
+  const params = {
+    apiKey: this.apiKey,
+  };
+
+  try {
+    return await lastValueFrom(
+      this.httpService.post(`${this.baseUrl}/food/images/analyze`, formData, { 
+        params, 
+        headers 
+      }).pipe(
+        map(res => res.data),
+        catchError(error => {
+          console.error('API Error:', error.response?.data || error.message);
+          return throwError(() => new BadRequestException('Failed to analyze food image file'));
+        })
+      )
+    );
+  } catch (error) {
+    throw new BadRequestException(error.message);
+  }
+}
+
 }
