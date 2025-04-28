@@ -7,6 +7,7 @@ import { catchError, map } from 'rxjs/operators';
 import { lastValueFrom, throwError } from 'rxjs';
 import { UploadService } from '@modules/upload/upload.service';
 
+
 @Injectable()
 export class RecipeService {
   private readonly apiKey: string;
@@ -16,6 +17,7 @@ export class RecipeService {
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
+  
     private readonly uploadService: UploadService,
   ) {
     this.apiKey = this.configService.get<string>('SPOONACULAR_API_KEY');
@@ -212,41 +214,35 @@ async analyzeImageByUrl(imageUrl: string) {
 }
 
 async analyzeImageByFile(file: Express.Multer.File) {
-    try {
-      // 1. Upload file to S3
-      const s3Url = await this.s3Service.uploadFile(
-        file.buffer,
-        file.mimetype
-      );
+  try {
+    
+    const s3Response = await this.uploadService.uploadFile(file); 
 
-      // 2. Call Spoonacular API with the S3 URL
-      const params = {
-        apiKey: this.apiKey,
-        imageUrl: s3Url,
-      };
+    const params = {
+      apiKey: this.apiKey,
+      imageUrl: s3Response.url, 
+    };
 
-      const analysisResult = await lastValueFrom(
-        this.httpService.get(`${this.baseUrl}/food/images/analyze`, { params }).pipe(
-          map(res => {
-            // Add the S3 URL to the response
-            return { ...res.data, imageUrl: s3Url };
-          }),
-          catchError(error => {
-            console.error('API Error:', error.response?.data || error.message);
-            // Try to delete the uploaded file in case of error
-            this.s3Service.deleteFile(s3Url).catch(deleteErr => {
-              console.error('Failed to delete S3 file:', deleteErr);
-            });
-            return throwError(() => new BadRequestException('Failed to analyze food image file'));
-          })
-        )
-      );
+    const analysisResult = await lastValueFrom(
+      this.httpService.get(`${this.baseUrl}/food/images/analyze`, { params }).pipe(
+        map(res => {
+          return { ...res.data, imageUrl: s3Response.url };
+        }),
+        catchError(error => {
+          console.error('API Error:', error.response?.data || error.message);
+          this.uploadService.deleteFile(s3Response.key).catch(deleteErr => {
+            console.error('Failed to delete S3 file:', deleteErr);
+          });
+          return throwError(() => new BadRequestException('Failed to analyze food image file'));
+        })
+      )
+    );
 
-      return analysisResult;
-    } catch (error) {
-      throw new BadRequestException(error.message);
-    }
+    return analysisResult;
+  } catch (error) {
+    throw new BadRequestException(error.message);
   }
+}
 
 async searchGroceryProductByUpc(upc: string) {
   const params = {

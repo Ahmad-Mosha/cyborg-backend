@@ -11,7 +11,6 @@ import { UploadService } from '@modules/upload/upload.service';
   imports: [
     ConfigModule,
     HttpModule,
-    UploadService,
     MulterModule.register({
       limits: {
         fileSize: 10 * 1024 * 1024, 

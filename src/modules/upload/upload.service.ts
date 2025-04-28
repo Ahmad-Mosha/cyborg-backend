@@ -54,7 +54,7 @@ export class UploadService {
         Key: key,
         Body: file.buffer,
         ContentType: file.mimetype,
-       // ACL: 'public-read',
+        //ACL: 'public-read',
         Metadata: {
           originalname: file.originalname,
           size: file.size.toString(),

@@ -11,6 +11,7 @@ import { databaseConfig } from './config/database.config';
 import { RecipeModule } from './modules/recipe/recipe.module';
 import { WorkoutModule } from './modules/workout/workout.module';
 import { NutritionModule } from '@modules/nutrition/nutrition.module';
+import { UploadModule } from '@modules/upload/upload.module';
 
 
 @Module({
@@ -28,6 +29,7 @@ import { NutritionModule } from '@modules/nutrition/nutrition.module';
     NutritionModule,
     RecipeModule,
     WorkoutModule,
+    UploadModule,
   ],
   providers: [],
 })
