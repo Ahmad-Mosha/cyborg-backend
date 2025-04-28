@@ -62,7 +62,18 @@ export class AuthService {
       password: hashedPassword,
     });
 
-    const { password, ...result } = newUser;
-    return result;
+    // Generate JWT token
+    const payload = {
+      email: newUser.email,
+      sub: newUser.id,
+      roles: newUser.roles,
+    };
+    const accessToken = this.jwtService.sign(payload);
+
+    const { password, ...userResult } = newUser;
+    return {
+      access_token: accessToken,
+      user: userResult,
+    };
   }
 }
