@@ -99,7 +99,7 @@ export class AnalyticsService {
           // Track exercise frequencies
           const exerciseId = exercise.exercise?.id;
           const exerciseName = exercise.exercise?.name || 'Unknown';
-          
+
           if (exerciseId) {
             const current = exerciseCounts.get(exerciseId) || {
               count: 0,
@@ -247,15 +247,15 @@ export class AnalyticsService {
     const query = this.workoutSessionRepository
       .createQueryBuilder('session')
       .select([
-        'EXTRACT(YEAR FROM session.startTime) AS year',
-        'EXTRACT(MONTH FROM session.startTime) AS month',
+        "strftime('%Y', session.startTime) AS year", // Use strftime for SQLite
+        "strftime('%m', session.startTime) AS month", // Use strftime for SQLite
         'COUNT(session.id) AS workouts',
         'SUM(session.durationMinutes) AS totalDuration',
         'AVG(session.durationMinutes) AS averageDuration',
       ])
       .where('session.user.id = :userId', { userId })
       .andWhere('session.isCompleted = true')
-      .groupBy('year, month')
+      .groupBy('year, month') // Group by the extracted year and month
       .orderBy('year, month');
 
     if (dateRange) {

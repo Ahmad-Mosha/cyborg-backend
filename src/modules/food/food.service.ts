@@ -15,6 +15,11 @@ interface NutrientValues {
   sugar?: number;
   sodium?: number;
   cholesterol?: number;
+  potassium?: number; // Added for consistency with mapUsdaFoodToEntity
+  vitamin_a?: number; // Added for consistency with mapUsdaFoodToEntity
+  vitamin_c?: number; // Added for consistency with mapUsdaFoodToEntity
+  calcium?: number; // Added for consistency with mapUsdaFoodToEntity
+  iron?: number; // Added for consistency with mapUsdaFoodToEntity
 }
 
 @Injectable()
@@ -112,12 +117,18 @@ export class FoodService {
         1003: 'protein',
         1004: 'fat',
         1005: 'carbohydrates',
-        1008: 'calories',
-        1051: 'water',
+        1008: 'calories', // Already present
         1079: 'fiber',
-        2000: 'sugar',
+        1092: 'potassium', // Add potassium mapping
         1093: 'sodium',
+        1104: 'vitamin_a', // Add vitamin A mapping (Retinol)
+        1106: 'vitamin_a', // Add vitamin A mapping (RAE)
+        1162: 'vitamin_c', // Add vitamin C mapping
+        1087: 'calcium', // Add calcium mapping
+        1089: 'iron', // Add iron mapping
         1253: 'cholesterol',
+        2000: 'sugar',
+        // 1051: 'water', // Water is usually not displayed directly
       };
 
       const mappedFoods = await Promise.all(data.foods.map(async (food) => {
@@ -141,13 +152,19 @@ export class FoodService {
           usdaId: detailedFood.fdcId?.toString(),
           servingSize: 100, // Base serving size
           servingUnit: 'g',
+          calories: nutrientValues.calories || 0, // Add calories
           fat: nutrientValues.fat || 0,
           cholesterol: nutrientValues.cholesterol || 0,
           sodium: nutrientValues.sodium || 0,
+          potassium: nutrientValues.potassium || 0, // Add potassium
           carbohydrates: nutrientValues.carbohydrates || 0,
           fiber: nutrientValues.fiber || 0,
           sugar: nutrientValues.sugar || 0,
-          protein: nutrientValues.protein || 0
+          protein: nutrientValues.protein || 0,
+          vitamin_a: nutrientValues.vitamin_a || 0, // Add vitamin A
+          vitamin_c: nutrientValues.vitamin_c || 0, // Add vitamin C
+          calcium: nutrientValues.calcium || 0, // Add calcium
+          iron: nutrientValues.iron || 0, // Add iron
         };
 
         return foodData;
@@ -192,6 +209,7 @@ export class FoodService {
       usdaId: (usdaFood.fdcId || usdaFood.fcdId)?.toString(),
       servingSize: 100,
       servingUnit: 'g',
+      calories: getNutrientAmount([1008]), // Add calories (Energy)
       fat: getNutrientAmount([1004]), // Total fat
       cholesterol: getNutrientAmount([1253]), // Cholesterol
       sodium: getNutrientAmount([1093]), // Sodium
@@ -269,6 +287,7 @@ export class FoodService {
           id: true,
           name: true,
           description: true,
+          calories: true, // Add calories to select
           fat: true,
           cholesterol: true,
           sodium: true,
