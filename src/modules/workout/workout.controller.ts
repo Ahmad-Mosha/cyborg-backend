@@ -10,6 +10,7 @@ import {
   Put,
   HttpCode,
   HttpStatus,
+  Patch,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -636,6 +637,31 @@ export class WorkoutController {
       setId,
       updateDto,
     );
+  }
+
+  @Patch('sessions/sets/:setId/toggle-complete')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Toggle the completion status of a workout set' })
+  @ApiParam({ name: 'setId', description: 'ID of the completed set' })
+  @ApiResponse({
+    status: 200,
+    description: 'Set completion status toggled successfully',
+    type: CompletedSet,
+  })
+  @ApiResponse({ status: 404, description: 'Set not found' })
+  async toggleSetCompletion(
+    @Req() req: RequestWithUser,
+    @Param('setId') setId: string,
+  ): Promise<CompletedSet> {
+    // Fetch the current set
+    const set = await this.sessionService.getCompletedSetById(
+      req.user.id,
+      setId,
+    );
+    // Toggle the isCompleted status
+    return this.sessionService.updateCompletedSet(req.user.id, setId, {
+      isCompleted: !set.isCompleted,
+    });
   }
 
   // Analytics Endpoints

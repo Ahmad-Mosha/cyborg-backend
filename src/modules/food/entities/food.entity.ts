@@ -12,6 +12,9 @@ export class Food {
   @Column({ nullable: true })
   description: string;
 
+  @Column({ type: 'float', nullable: true })
+  calories: number;
+
   @Column({ type: 'float' , nullable: true})
   fat: number;
 

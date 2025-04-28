@@ -322,6 +322,34 @@ export class SessionService {
   }
 
   /**
+   * Get a completed set by ID, ensuring it belongs to the user
+   */
+  async getCompletedSetById(
+    userId: string,
+    setId: string,
+  ): Promise<CompletedSet> {
+    const set = await this.completedSetRepository.findOne({
+      where: {
+        id: setId,
+        completedExercise: {
+          session: { user: { id: userId } },
+        },
+      },
+      relations: [
+        'completedExercise',
+        'completedExercise.session',
+        'completedExercise.session.user',
+      ],
+    });
+
+    if (!set) {
+      throw new NotFoundException(`Completed set with ID ${setId} not found`);
+    }
+
+    return set;
+  }
+
+  /**
    * Update a completed set (e.g., mark as completed, update reps or weight)
    */
   async updateCompletedSet(

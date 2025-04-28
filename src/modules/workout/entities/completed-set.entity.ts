@@ -42,6 +42,9 @@ export class CompletedSet {
   })
   type: SetType;
 
+  @Column({ default: false })
+  isCompleted: boolean;
+
   @ManyToOne(() => CompletedExercise, (exercise) => exercise.sets, {
     onDelete: 'CASCADE',
   })
