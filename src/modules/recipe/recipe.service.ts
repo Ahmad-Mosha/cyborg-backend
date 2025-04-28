@@ -5,15 +5,18 @@ import { SearchRecipeDto, IngredientSearchDto } from './dto/recipe.dto';
 import { Recipe } from './interfaces/recipe.interface';
 import { catchError, map } from 'rxjs/operators';
 import { lastValueFrom, throwError } from 'rxjs';
+import { UploadService } from '@modules/upload/upload.service';
 
 @Injectable()
 export class RecipeService {
   private readonly apiKey: string;
   private readonly baseUrl = 'https://api.spoonacular.com';
+  s3Service: any;
 
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
+    private readonly uploadService: UploadService,
   ) {
     this.apiKey = this.configService.get<string>('SPOONACULAR_API_KEY');
   }
@@ -208,28 +211,56 @@ async analyzeImageByUrl(imageUrl: string) {
   }
 }
 
-async analyzeImageByFile(file: Buffer) {
-  const formData = new FormData();
-  formData.append('file', new Blob([file]), 'food.jpg');
+async analyzeImageByFile(file: Express.Multer.File) {
+    try {
+      // 1. Upload file to S3
+      const s3Url = await this.s3Service.uploadFile(
+        file.buffer,
+        file.mimetype
+      );
 
-  const headers = {
-    'Content-Type': 'multipart/form-data',
-  };
+      // 2. Call Spoonacular API with the S3 URL
+      const params = {
+        apiKey: this.apiKey,
+        imageUrl: s3Url,
+      };
 
+      const analysisResult = await lastValueFrom(
+        this.httpService.get(`${this.baseUrl}/food/images/analyze`, { params }).pipe(
+          map(res => {
+            // Add the S3 URL to the response
+            return { ...res.data, imageUrl: s3Url };
+          }),
+          catchError(error => {
+            console.error('API Error:', error.response?.data || error.message);
+            // Try to delete the uploaded file in case of error
+            this.s3Service.deleteFile(s3Url).catch(deleteErr => {
+              console.error('Failed to delete S3 file:', deleteErr);
+            });
+            return throwError(() => new BadRequestException('Failed to analyze food image file'));
+          })
+        )
+      );
+
+      return analysisResult;
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+async searchGroceryProductByUpc(upc: string) {
   const params = {
     apiKey: this.apiKey,
+    upc: upc,
   };
 
   try {
     return await lastValueFrom(
-      this.httpService.post(`${this.baseUrl}/food/images/analyze`, formData, { 
-        params, 
-        headers 
-      }).pipe(
+      this.httpService.get(`${this.baseUrl}/food/products/upc/${upc}`, { params }).pipe(
         map(res => res.data),
         catchError(error => {
           console.error('API Error:', error.response?.data || error.message);
-          return throwError(() => new BadRequestException('Failed to analyze food image file'));
+          return throwError(() => new BadRequestException(`Failed to find grocery product with UPC ${upc}`));
         })
       )
     );

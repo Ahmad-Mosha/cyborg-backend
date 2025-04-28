@@ -1,7 +1,7 @@
 import { Controller, Get, Query, Param, ValidationPipe, Post, Body, UploadedFile, UseInterceptors, BadRequestException } from '@nestjs/common';
 import {ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiConsumes} from '@nestjs/swagger';
 import { RecipeService } from './recipe.service';
-import { SearchRecipeDto, RecipeDto, IngredientSearchDto, ImageAnalysisByUrlDto, FoodAnalysisResponseDto } from './dto/recipe.dto';
+import { SearchRecipeDto, RecipeDto, IngredientSearchDto, ImageAnalysisByUrlDto, FoodAnalysisResponseDto, GroceryProductDto } from './dto/recipe.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('Recipes')
@@ -74,11 +74,20 @@ async analyzeImageByUrl(@Body() imageDto: ImageAnalysisByUrlDto) {
 @ApiConsumes('multipart/form-data')
 @ApiResponse({ status: 200, description: 'Returns analysis of food image', type: FoodAnalysisResponseDto })
 @UseInterceptors(FileInterceptor('file'))  
-async analyzeImageByFile(@UploadedFile() file) {
+async analyzeImageByFile(@UploadedFile() file: Express.Multer.File) {
   if (!file) {
     throw new BadRequestException('File is required');
   }
-  return this.recipeService.analyzeImageByFile(file.buffer);
+  return this.recipeService.analyzeImageByFile(file);
 }
+
+@Get('grocery/upc/:upc')
+@ApiOperation({ summary: 'Search grocery products by UPC barcode' })
+@ApiParam({ name: 'upc', description: 'UPC barcode' })
+@ApiResponse({ status: 200, description: 'Returns grocery product details', type: GroceryProductDto })
+async searchGroceryProductByUpc(@Param('upc') upc: string) {
+  return this.recipeService.searchGroceryProductByUpc(upc);
+}
+
 }
 

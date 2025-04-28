@@ -209,5 +209,39 @@ export class FoodAnalysisResponseDto {
     protein: string;
     carbs: string;
   };
+
+  @ApiProperty({ description: 'S3 URL of the uploaded image' })
+  imageUrl?: string;
 }
 
+export class UpcSearchDto {
+  @ApiProperty({ required: true, description: 'UPC barcode to search for grocery product' })
+  @IsString()
+  upc: string;
+}
+
+export class GroceryProductDto {
+  @ApiProperty({ description: 'Product ID' })
+  id: number;
+
+  @ApiProperty({ description: 'Product title' })
+  title: string;
+
+  @ApiProperty({ description: 'Product image URL' })
+  image: string;
+
+  @ApiProperty({ description: 'Product description' })
+  description?: string;
+
+  @ApiProperty({ description: 'Product price' })
+  price?: number;
+
+  @ApiProperty({ description: 'Product nutrition facts' })
+  nutrition?: any;
+
+  @ApiProperty({ description: 'Ingredients list' })
+  ingredients?: string[];
+
+  @ApiProperty({ description: 'Brand name' })
+  brand?: string;
+}

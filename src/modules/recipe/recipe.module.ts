@@ -4,12 +4,14 @@ import { HttpModule } from '@nestjs/axios';
 import { RecipeController } from './recipe.controller';
 import { RecipeService } from './recipe.service';
 import { MulterModule } from '@nestjs/platform-express';
+import { UploadService } from '@modules/upload/upload.service';
 
 
 @Module({
   imports: [
     ConfigModule,
     HttpModule,
+    UploadService,
     MulterModule.register({
       limits: {
         fileSize: 10 * 1024 * 1024, 
@@ -17,6 +19,6 @@ import { MulterModule } from '@nestjs/platform-express';
     }),
   ],
   controllers: [RecipeController],
-  providers: [RecipeService],
+  providers: [RecipeService , UploadService],
 })
 export class RecipeModule {}
