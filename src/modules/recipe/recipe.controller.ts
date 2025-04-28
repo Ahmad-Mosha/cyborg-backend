@@ -1,7 +1,33 @@
-import { Controller, Get, Query, Param, ValidationPipe, Post, Body, UploadedFile, UseInterceptors, BadRequestException } from '@nestjs/common';
-import {ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiConsumes} from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Query,
+  Param,
+  ValidationPipe,
+  Post,
+  Body,
+  UploadedFile,
+  UseInterceptors,
+  BadRequestException,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
+  ApiConsumes,
+  ApiBody,
+} from '@nestjs/swagger';
 import { RecipeService } from './recipe.service';
-import { SearchRecipeDto, RecipeDto, IngredientSearchDto, ImageAnalysisByUrlDto, FoodAnalysisResponseDto, GroceryProductDto } from './dto/recipe.dto';
+import {
+  SearchRecipeDto,
+  RecipeDto,
+  IngredientSearchDto,
+  ImageAnalysisByUrlDto,
+  FoodAnalysisResponseDto,
+  GroceryProductDto,
+} from './dto/recipe.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('Recipes')
@@ -11,7 +37,12 @@ export class RecipeController {
 
   @Get('search')
   @ApiOperation({ summary: 'Search recipes with filters' })
-  @ApiResponse({ status: 200, description: 'Returns categorized recipes', type: RecipeDto, isArray: true })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns categorized recipes',
+    type: RecipeDto,
+    isArray: true,
+  })
   async searchRecipes(@Query(ValidationPipe) searchDto: SearchRecipeDto) {
     return this.recipeService.searchRecipes(searchDto);
   }
@@ -19,7 +50,11 @@ export class RecipeController {
   @Get(':id')
   @ApiOperation({ summary: 'Get recipe by ID' })
   @ApiParam({ name: 'id', description: 'Recipe ID' })
-  @ApiResponse({ status: 200, description: 'Returns recipe details', type: RecipeDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns recipe details',
+    type: RecipeDto,
+  })
   async getRecipeById(@Param('id') id: number) {
     return this.recipeService.getRecipeById(id);
   }
@@ -27,7 +62,12 @@ export class RecipeController {
   @Get(':id/similar')
   @ApiOperation({ summary: 'Get similar recipes' })
   @ApiParam({ name: 'id', description: 'Recipe ID' })
-  @ApiResponse({ status: 200, description: 'Returns similar recipes', type: RecipeDto, isArray: true })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns similar recipes',
+    type: RecipeDto,
+    isArray: true,
+  })
   async getSimilarRecipes(@Param('id') id: number) {
     return this.recipeService.getSimilarRecipes(id);
   }
@@ -35,10 +75,11 @@ export class RecipeController {
   @Get('ingredients/search')
   @ApiOperation({ summary: 'Search ingredients' })
   @ApiResponse({ status: 200, description: 'Returns matching ingredients' })
-  async searchIngredients(@Query(ValidationPipe) searchDto: IngredientSearchDto) {
+  async searchIngredients(
+    @Query(ValidationPipe) searchDto: IngredientSearchDto,
+  ) {
     return this.recipeService.searchIngredients(searchDto);
   }
-
 
   @Get(':id/nutrition')
   @ApiOperation({ summary: 'Get recipe nutrition information' })
@@ -52,42 +93,66 @@ export class RecipeController {
   @ApiOperation({ summary: 'Get analyzed recipe instructions' })
   @ApiParam({ name: 'id', description: 'Recipe ID' })
   @ApiQuery({ name: 'stepBreakdown', required: false, type: Boolean })
-  @ApiResponse({ status: 200, description: 'Returns analyzed recipe instructions' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns analyzed recipe instructions',
+  })
   async getAnalyzedInstructions(
     @Param('id') id: number,
     @Query('stepBreakdown') stepBreakdown?: boolean,
   ) {
     return this.recipeService.getAnalyzedInstructions(id, stepBreakdown);
-}
-
-
-@Post('analyze/url')
-@ApiOperation({ summary: 'Analyze food image by URL' })
-@ApiResponse({ status: 200, description: 'Returns analysis of food image', type: FoodAnalysisResponseDto })
-async analyzeImageByUrl(@Body() imageDto: ImageAnalysisByUrlDto) {
-  return this.recipeService.analyzeImageByUrl(imageDto.imageUrl);
-}
-
-
-@Post('analyze/file')
-@ApiOperation({ summary: 'Analyze food image by file upload' })
-@ApiConsumes('multipart/form-data')
-@ApiResponse({ status: 200, description: 'Returns analysis of food image', type: FoodAnalysisResponseDto })
-@UseInterceptors(FileInterceptor('file'))  
-async analyzeImageByFile(@UploadedFile() file: Express.Multer.File) {
-  if (!file) {
-    throw new BadRequestException('File is required');
   }
-  return this.recipeService.analyzeImageByFile(file);
-}
 
-@Get('grocery/upc/:upc')
-@ApiOperation({ summary: 'Search grocery products by UPC barcode' })
-@ApiParam({ name: 'upc', description: 'UPC barcode' })
-@ApiResponse({ status: 200, description: 'Returns grocery product details', type: GroceryProductDto })
-async searchGroceryProductByUpc(@Param('upc') upc: string) {
-  return this.recipeService.searchGroceryProductByUpc(upc);
-}
+  @Post('analyze/url')
+  @ApiOperation({ summary: 'Analyze food image by URL' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns analysis of food image',
+    type: FoodAnalysisResponseDto,
+  })
+  async analyzeImageByUrl(@Body() imageDto: ImageAnalysisByUrlDto) {
+    return this.recipeService.analyzeImageByUrl(imageDto.imageUrl);
+  }
 
-}
+  @Post('analyze/file')
+  @ApiOperation({ summary: 'Analyze food image by file upload' })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({
+    status: 200,
+    description: 'Returns analysis of food image',
+    type: FoodAnalysisResponseDto,
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Food image file to analyze',
+        },
+      },
+      required: ['file'],
+    },
+  })
+  @UseInterceptors(FileInterceptor('file'))
+  async analyzeImageByFile(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('File is required');
+    }
+    return this.recipeService.analyzeImageByFile(file);
+  }
 
+  @Get('grocery/upc/:upc')
+  @ApiOperation({ summary: 'Search grocery products by UPC barcode' })
+  @ApiParam({ name: 'upc', description: 'UPC barcode' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns grocery product details',
+    type: GroceryProductDto,
+  })
+  async searchGroceryProductByUpc(@Param('upc') upc: string) {
+    return this.recipeService.searchGroceryProductByUpc(upc);
+  }
+}
