@@ -98,11 +98,16 @@ export class FoodService {
       dataType: ['Survey (FNDDS)', 'Foundation', 'SR Legacy'].join(','),
       sortBy: 'dataType.keyword',
       sortOrder: 'asc',
+      // Request nutrients in the search response to avoid additional API calls
+      nutrients: [
+        1003, 1004, 1005, 1008, 1079, 1092, 1093, 1104, 1162, 1087, 1089, 1253,
+        2000,
+      ].join(','),
     };
 
     try {
       const data = await this.callUsdaApi(endpoint, params);
-      
+
       if (!data.foods || data.foods.length === 0) {
         return {
           foods: [],
@@ -117,58 +122,59 @@ export class FoodService {
         1003: 'protein',
         1004: 'fat',
         1005: 'carbohydrates',
-        1008: 'calories', // Already present
+        1008: 'calories',
         1079: 'fiber',
-        1092: 'potassium', // Add potassium mapping
+        1092: 'potassium',
         1093: 'sodium',
-        1104: 'vitamin_a', // Add vitamin A mapping (Retinol)
-        1106: 'vitamin_a', // Add vitamin A mapping (RAE)
-        1162: 'vitamin_c', // Add vitamin C mapping
-        1087: 'calcium', // Add calcium mapping
-        1089: 'iron', // Add iron mapping
+        1104: 'vitamin_a',
+        1106: 'vitamin_a',
+        1162: 'vitamin_c',
+        1087: 'calcium',
+        1089: 'iron',
         1253: 'cholesterol',
         2000: 'sugar',
-        // 1051: 'water', // Water is usually not displayed directly
       };
 
-      const mappedFoods = await Promise.all(data.foods.map(async (food) => {
-        // Get detailed food information for each food
-        const detailedFood = await this.callUsdaApi(`/food/${food.fdcId}`);
-        
-        // Create a nutrient value map
-        const nutrientValues: NutrientValues = {};
-        detailedFood.foodNutrients?.forEach(nutrient => {
-          const nutrientId = nutrient.nutrient?.id || nutrient.nutrientId;
+      // Process foods in batches to improve performance
+      const mappedFoods = data.foods.map((food) => {
+        // Extract nutrients from the food data directly
+        const nutrients = food.foodNutrients || [];
+        const nutrientValues = {};
+
+        nutrients.forEach((nutrient) => {
+          const nutrientId =
+            nutrient.nutrientId || (nutrient.nutrient && nutrient.nutrient.id);
           const nutrientName = nutrientMap[nutrientId];
           if (nutrientName) {
-            nutrientValues[nutrientName] = nutrient.amount || 0;
+            nutrientValues[nutrientName] =
+              nutrient.value || nutrient.amount || 0;
           }
         });
 
         // Create the food entity data
-        const foodData: Partial<Food> = {
-          name: detailedFood.description || food.description,
-          description: detailedFood.additionalDescriptions || food.additionalDescriptions,
-          usdaId: detailedFood.fdcId?.toString(),
+        const foodData = {
+          name: food.description || '',
+          description: food.additionalDescriptions || '',
+          usdaId: food.fdcId?.toString() || '',
           servingSize: 100, // Base serving size
           servingUnit: 'g',
-          calories: nutrientValues.calories || 0, // Add calories
-          fat: nutrientValues.fat || 0,
-          cholesterol: nutrientValues.cholesterol || 0,
-          sodium: nutrientValues.sodium || 0,
-          potassium: nutrientValues.potassium || 0, // Add potassium
-          carbohydrates: nutrientValues.carbohydrates || 0,
-          fiber: nutrientValues.fiber || 0,
-          sugar: nutrientValues.sugar || 0,
-          protein: nutrientValues.protein || 0,
-          vitamin_a: nutrientValues.vitamin_a || 0, // Add vitamin A
-          vitamin_c: nutrientValues.vitamin_c || 0, // Add vitamin C
-          calcium: nutrientValues.calcium || 0, // Add calcium
-          iron: nutrientValues.iron || 0, // Add iron
+          calories: nutrientValues['calories'] || 0,
+          fat: nutrientValues['fat'] || 0,
+          cholesterol: nutrientValues['cholesterol'] || 0,
+          sodium: nutrientValues['sodium'] || 0,
+          potassium: nutrientValues['potassium'] || 0,
+          carbohydrates: nutrientValues['carbohydrates'] || 0,
+          fiber: nutrientValues['fiber'] || 0,
+          sugar: nutrientValues['sugar'] || 0,
+          protein: nutrientValues['protein'] || 0,
+          vitamin_a: nutrientValues['vitamin_a'] || 0,
+          vitamin_c: nutrientValues['vitamin_c'] || 0,
+          calcium: nutrientValues['calcium'] || 0,
+          iron: nutrientValues['iron'] || 0,
         };
 
         return foodData;
-      }));
+      });
 
       return {
         foods: mappedFoods,
@@ -190,11 +196,11 @@ export class FoodService {
 
   private async mapUsdaFoodToEntity(usdaFood: any): Promise<Partial<Food>> {
     const nutrients = usdaFood.foodNutrients || [];
-    
+
     const getNutrientAmount = (ids: number[]) => {
       for (const id of ids) {
         const nutrient = nutrients.find(
-          (n) => n.nutrient?.id === id || n.nutrientId === id
+          (n) => n.nutrient?.id === id || n.nutrientId === id,
         );
         if (nutrient && (nutrient.amount || nutrient.value)) {
           return nutrient.amount || nutrient.value;
@@ -221,7 +227,7 @@ export class FoodService {
       vitamin_a: getNutrientAmount([1104, 1106]), // Vitamin A
       vitamin_c: getNutrientAmount([1162]), // Vitamin C
       calcium: getNutrientAmount([1087]), // Calcium
-      iron: getNutrientAmount([1089]) // Iron
+      iron: getNutrientAmount([1089]), // Iron
     };
 
     return foodData;
@@ -342,7 +348,7 @@ export class FoodService {
 
   async getFoodByUsdaId(usdaId: string) {
     const food = await this.foodRepository.findOne({
-      where: { usdaId: usdaId }
+      where: { usdaId: usdaId },
     });
 
     if (!food) {
