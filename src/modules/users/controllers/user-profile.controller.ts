@@ -7,18 +7,26 @@ import {
   UseGuards,
   Request,
   UseInterceptors,
+  MaxFileSizeValidator,
+  ParseFilePipe,
+  FileTypeValidator,
+  Patch,
+  UploadedFile,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiTags,
   ApiOperation,
   ApiResponse,
+  ApiConsumes,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { UserProfileService } from '../services/user-profile.service';
 import { UpdateProfileDto } from '../dto/update-profile.dto';
 import { User } from '../entities/user.entity';
 import { ResponseInterceptor } from '@shared/interceptors/response.interceptor';
+import { ProfilePictureDto } from '../dto/Profile-Picture.dto';
+import { FileInterceptor } from '@nestjs/platform-express/multer/interceptors/file.interceptor';
 
 @Controller('user-profile')
 @ApiTags('User Profile')
@@ -63,6 +71,42 @@ export class UserProfileController {
     return this.userProfileService.update(req.user.id, updateProfileDto);
   }
 
+  @Patch('profile-picture')
+  @ApiOperation({ summary: 'Upload or update profile picture' })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({
+    status: 200,
+    description: 'Profile picture uploaded successfully',
+    type: ProfilePictureDto,
+  })
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadProfilePicture(
+    @Request() req,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // 5MB
+          new FileTypeValidator({ fileType: /(jpg|jpeg|png)$/ }),
+        ],
+      }),
+    )
+    file: Express.Multer.File,
+  ): Promise<ProfilePictureDto> {
+    return this.userProfileService.uploadProfilePicture(req.user.id, file);
+  }
+
+  @Delete('profile-picture')
+  @ApiOperation({ summary: 'Delete profile picture' })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile picture deleted successfully',
+    type: User,
+  })
+  async deleteProfilePicture(@Request() req): Promise<User> {
+    return this.userProfileService.deleteProfilePicture(req.user.id);
+  }
+
+
   @Delete()
   @ApiOperation({
     summary: 'Delete user profile',
@@ -77,3 +121,4 @@ export class UserProfileController {
     return this.userProfileService.delete(req.user.id);
   }
 }
+

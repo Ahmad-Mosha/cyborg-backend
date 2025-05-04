@@ -51,4 +51,27 @@ export class UpdateProfileDto {
     format: 'email',
   })
   email?: string;
+
+  @IsString()
+  @IsOptional()
+  @ApiProperty({
+    description: "User's profile picture URL",
+    example: 'https://bucket-name.s3.region.amazonaws.com/uploads/uuid.jpg',
+    required: false,
+    nullable: true,
+    type: String,
+  })
+  profilePictureUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  @ApiProperty({
+    description: "User's profile picture key in storage",
+    example: 'uploads/uuid.jpg',
+    required: false,
+    nullable: true,
+    type: String,
+  })
+  profilePictureKey?: string;
 }
+

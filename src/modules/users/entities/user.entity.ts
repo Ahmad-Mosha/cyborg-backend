@@ -30,6 +30,12 @@ export class User {
   @Column()
   lastName: string;
 
+  @Column({ nullable: true })
+  profilePictureUrl: string;
+
+  @Column({ nullable: true })
+  profilePictureKey: string;
+
   @OneToOne(() => UserData, (health) => health.user)
   health: UserData;
 
