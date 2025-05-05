@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { Food } from './entities/food.entity';
 import { User } from '../users/entities/user.entity';
+import { CreateCustomFoodDto } from './dto/create-custom-food.dto';
 
 interface NutrientValues {
   calories?: number;
@@ -98,11 +99,16 @@ export class FoodService {
       dataType: ['Survey (FNDDS)', 'Foundation', 'SR Legacy'].join(','),
       sortBy: 'dataType.keyword',
       sortOrder: 'asc',
+      // Request nutrients in the search response to avoid additional API calls
+      nutrients: [
+        1003, 1004, 1005, 1008, 1079, 1092, 1093, 1104, 1162, 1087, 1089, 1253,
+        2000,
+      ].join(','),
     };
 
     try {
       const data = await this.callUsdaApi(endpoint, params);
-      
+
       if (!data.foods || data.foods.length === 0) {
         return {
           foods: [],
@@ -117,58 +123,59 @@ export class FoodService {
         1003: 'protein',
         1004: 'fat',
         1005: 'carbohydrates',
-        1008: 'calories', // Already present
+        1008: 'calories',
         1079: 'fiber',
-        1092: 'potassium', // Add potassium mapping
+        1092: 'potassium',
         1093: 'sodium',
-        1104: 'vitamin_a', // Add vitamin A mapping (Retinol)
-        1106: 'vitamin_a', // Add vitamin A mapping (RAE)
-        1162: 'vitamin_c', // Add vitamin C mapping
-        1087: 'calcium', // Add calcium mapping
-        1089: 'iron', // Add iron mapping
+        1104: 'vitamin_a',
+        1106: 'vitamin_a',
+        1162: 'vitamin_c',
+        1087: 'calcium',
+        1089: 'iron',
         1253: 'cholesterol',
         2000: 'sugar',
-        // 1051: 'water', // Water is usually not displayed directly
       };
 
-      const mappedFoods = await Promise.all(data.foods.map(async (food) => {
-        // Get detailed food information for each food
-        const detailedFood = await this.callUsdaApi(`/food/${food.fdcId}`);
-        
-        // Create a nutrient value map
-        const nutrientValues: NutrientValues = {};
-        detailedFood.foodNutrients?.forEach(nutrient => {
-          const nutrientId = nutrient.nutrient?.id || nutrient.nutrientId;
+      // Process foods in batches to improve performance
+      const mappedFoods = data.foods.map((food) => {
+        // Extract nutrients from the food data directly
+        const nutrients = food.foodNutrients || [];
+        const nutrientValues = {};
+
+        nutrients.forEach((nutrient) => {
+          const nutrientId =
+            nutrient.nutrientId || (nutrient.nutrient && nutrient.nutrient.id);
           const nutrientName = nutrientMap[nutrientId];
           if (nutrientName) {
-            nutrientValues[nutrientName] = nutrient.amount || 0;
+            nutrientValues[nutrientName] =
+              nutrient.value || nutrient.amount || 0;
           }
         });
 
         // Create the food entity data
-        const foodData: Partial<Food> = {
-          name: detailedFood.description || food.description,
-          description: detailedFood.additionalDescriptions || food.additionalDescriptions,
-          usdaId: detailedFood.fdcId?.toString(),
+        const foodData = {
+          name: food.description || '',
+          description: food.additionalDescriptions || '',
+          usdaId: food.fdcId?.toString() || '',
           servingSize: 100, // Base serving size
           servingUnit: 'g',
-          calories: nutrientValues.calories || 0, // Add calories
-          fat: nutrientValues.fat || 0,
-          cholesterol: nutrientValues.cholesterol || 0,
-          sodium: nutrientValues.sodium || 0,
-          potassium: nutrientValues.potassium || 0, // Add potassium
-          carbohydrates: nutrientValues.carbohydrates || 0,
-          fiber: nutrientValues.fiber || 0,
-          sugar: nutrientValues.sugar || 0,
-          protein: nutrientValues.protein || 0,
-          vitamin_a: nutrientValues.vitamin_a || 0, // Add vitamin A
-          vitamin_c: nutrientValues.vitamin_c || 0, // Add vitamin C
-          calcium: nutrientValues.calcium || 0, // Add calcium
-          iron: nutrientValues.iron || 0, // Add iron
+          calories: nutrientValues['calories'] || 0,
+          fat: nutrientValues['fat'] || 0,
+          cholesterol: nutrientValues['cholesterol'] || 0,
+          sodium: nutrientValues['sodium'] || 0,
+          potassium: nutrientValues['potassium'] || 0,
+          carbohydrates: nutrientValues['carbohydrates'] || 0,
+          fiber: nutrientValues['fiber'] || 0,
+          sugar: nutrientValues['sugar'] || 0,
+          protein: nutrientValues['protein'] || 0,
+          vitamin_a: nutrientValues['vitamin_a'] || 0,
+          vitamin_c: nutrientValues['vitamin_c'] || 0,
+          calcium: nutrientValues['calcium'] || 0,
+          iron: nutrientValues['iron'] || 0,
         };
 
         return foodData;
-      }));
+      });
 
       return {
         foods: mappedFoods,
@@ -190,11 +197,11 @@ export class FoodService {
 
   private async mapUsdaFoodToEntity(usdaFood: any): Promise<Partial<Food>> {
     const nutrients = usdaFood.foodNutrients || [];
-    
+
     const getNutrientAmount = (ids: number[]) => {
       for (const id of ids) {
         const nutrient = nutrients.find(
-          (n) => n.nutrient?.id === id || n.nutrientId === id
+          (n) => n.nutrient?.id === id || n.nutrientId === id,
         );
         if (nutrient && (nutrient.amount || nutrient.value)) {
           return nutrient.amount || nutrient.value;
@@ -221,7 +228,7 @@ export class FoodService {
       vitamin_a: getNutrientAmount([1104, 1106]), // Vitamin A
       vitamin_c: getNutrientAmount([1162]), // Vitamin C
       calcium: getNutrientAmount([1087]), // Calcium
-      iron: getNutrientAmount([1089]) // Iron
+      iron: getNutrientAmount([1089]), // Iron
     };
 
     return foodData;
@@ -342,7 +349,7 @@ export class FoodService {
 
   async getFoodByUsdaId(usdaId: string) {
     const food = await this.foodRepository.findOne({
-      where: { usdaId: usdaId }
+      where: { usdaId: usdaId },
     });
 
     if (!food) {
@@ -350,5 +357,100 @@ export class FoodService {
     }
 
     return food;
+  }
+
+  async createCustomFood(dto: CreateCustomFoodDto, user: User): Promise<Food> {
+    try {
+      const customFood = this.foodRepository.create({
+        ...dto,
+        isCustom: true,
+        user: { id: user.id },
+        servingSize: dto.servingSize || 100,
+        servingUnit: dto.servingUnit || 'g',
+      });
+
+      return await this.foodRepository.save(customFood);
+    } catch (error) {
+      console.error('Error in createCustomFood:', error);
+      throw new HttpException(
+        'Failed to create custom food',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getUserFoods(
+    user: User,
+    page: number = 1,
+    pageSize: number = 10,
+    isCustomOnly: boolean = false,
+  ) {
+    const skip = (Number(page) - 1) * Number(pageSize);
+    const take = Number(pageSize);
+
+    try {
+      const query = this.foodRepository
+        .createQueryBuilder('food')
+        .where('food.user.id = :userId', { userId: user.id });
+
+      if (isCustomOnly) {
+        query.andWhere('food.isCustom = :isCustom', { isCustom: true });
+      }
+
+      const [foods, total] = await query
+        .skip(skip)
+        .take(take)
+        .orderBy('food.createdAt', 'DESC')
+        .getManyAndCount();
+
+      return {
+        data: foods,
+        meta: {
+          total,
+          page: Number(page),
+          pageSize: Number(pageSize),
+          totalPages: Math.ceil(total / take),
+        },
+      };
+    } catch (error) {
+      console.error('Error in getUserFoods:', error);
+      throw new HttpException(
+        'Failed to fetch user foods',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Create a food item from provided data
+   * This method supports both custom foods and foods from external sources
+   */
+  async createFood(foodData: Partial<Food>, user: User): Promise<Food> {
+    try {
+      // Set defaults for missing values
+      const foodToSave = this.foodRepository.create({
+        ...foodData,
+        servingSize: foodData.servingSize || 100,
+        servingUnit: foodData.servingUnit || 'g',
+        user: { id: user.id },
+        // Set nutrition fields to 0 if not provided
+        calories: foodData.calories || 0,
+        protein: foodData.protein || 0,
+        carbohydrates: foodData.carbohydrates || 0,
+        fat: foodData.fat || 0,
+        fiber: foodData.fiber || 0,
+        sugar: foodData.sugar || 0,
+        sodium: foodData.sodium || 0,
+        cholesterol: foodData.cholesterol || 0
+      });
+
+      return await this.foodRepository.save(foodToSave);
+    } catch (error) {
+      console.error('Error in createFood:', error);
+      throw new HttpException(
+        'Failed to create food item',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }

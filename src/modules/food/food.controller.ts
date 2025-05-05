@@ -6,6 +6,9 @@ import {
   Query,
   Param,
   UseGuards,
+  Body,
+  Request,
+  HttpStatus,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -20,10 +23,12 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GetUser } from '../auth/decorators/get-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { FoodSearchDto } from './dto/food-search.dto';
+import { CreateCustomFoodDto } from './dto/create-custom-food.dto';
 
 @ApiTags('Food')
 @ApiBearerAuth()
-@Controller('food')
+@UseGuards(JwtAuthGuard)
+@Controller('foods')
 export class FoodController {
   constructor(private readonly foodService: FoodService) {}
 
@@ -33,12 +38,15 @@ export class FoodController {
     description: 'Search for foods with pagination support',
   })
   @ApiResponse({ status: 200, description: 'List of foods with pagination' })
-  async searchFood(@Query() searchDto: FoodSearchDto) {
-    return await this.foodService.searchFoods(
-      searchDto.query,
-      searchDto.page,
-      searchDto.pageSize,
-    );
+  @ApiQuery({ name: 'query', required: true })
+  @ApiQuery({ name: 'page', required: false })
+  @ApiQuery({ name: 'pageSize', required: false })
+  async searchFoods(
+    @Query('query') query: string,
+    @Query('page') page?: number,
+    @Query('pageSize') pageSize?: number,
+  ) {
+    return this.foodService.searchFoods(query, page, pageSize);
   }
 
   @Get('details/:fdcId')
@@ -58,8 +66,6 @@ export class FoodController {
   }
 
   @Post('favorites/:fdcId')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Add food to favorites',
     description: "Save a food item to user's favorites",
@@ -77,29 +83,6 @@ export class FoodController {
   }
 
   @Get('favorites')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Get favorite foods',
-    description: "Get user's favorite foods with pagination",
-  })
-  @ApiQuery({
-    name: 'page',
-    required: false,
-    description: 'Page number (default: 1)',
-    type: Number,
-  })
-  @ApiQuery({
-    name: 'pageSize',
-    required: false,
-    description: 'Number of items per page (default: 10)',
-    type: Number,
-  })
-  @ApiResponse({ status: 200, description: 'List of favorite foods' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @Get('favorites')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get favorite foods',
     description: "Get user's favorite foods with pagination",
@@ -133,8 +116,6 @@ export class FoodController {
   }
 
   @Delete('favorites/:id')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Remove food from favorites',
     description: "Remove a food item from user's favorites",
@@ -150,5 +131,49 @@ export class FoodController {
   async removeFavorite(@Param('id') id: string, @GetUser() user: User) {
     await this.foodService.removeFavorite(id, user);
     return { message: 'Food removed from favorites' };
+  }
+
+  @Post('custom')
+  @ApiOperation({ summary: 'Create a custom food' })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'Custom food created successfully',
+  })
+  async createCustomFood(
+    @Body() createCustomFoodDto: CreateCustomFoodDto,
+    @Request() req,
+  ) {
+    return this.foodService.createCustomFood(createCustomFoodDto, req.user);
+  }
+
+  @Get('custom')
+  @ApiOperation({ summary: 'Get user custom foods' })
+  @ApiQuery({ name: 'page', required: false })
+  @ApiQuery({ name: 'pageSize', required: false })
+  async getUserCustomFoods(
+    @Request() req,
+    @Query('page') page?: number,
+    @Query('pageSize') pageSize?: number,
+  ) {
+    return this.foodService.getUserFoods(req.user, page, pageSize, true);
+  }
+
+  @Get('user-foods')
+  @ApiOperation({ summary: 'Get all user foods (both favorites and custom)' })
+  @ApiQuery({ name: 'page', required: false })
+  @ApiQuery({ name: 'pageSize', required: false })
+  async getUserFoods(
+    @Request() req,
+    @Query('page') page?: number,
+    @Query('pageSize') pageSize?: number,
+  ) {
+    return this.foodService.getUserFoods(req.user, page, pageSize);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get food details by ID' })
+  @ApiParam({ name: 'id', description: 'Food ID' })
+  async getFoodById(@Param('id') id: string) {
+    return this.foodService.getFoodById(id);
   }
 }

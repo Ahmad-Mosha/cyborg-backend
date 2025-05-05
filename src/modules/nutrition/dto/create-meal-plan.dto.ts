@@ -1,15 +1,43 @@
-import { IsString, IsNotEmpty, IsOptional, IsDate, IsInt, Min, ValidateNested, IsArray, IsNumber } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsDate,
+  IsInt,
+  Min,
+  ValidateNested,
+  IsArray,
+  IsNumber,
+  IsBoolean,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
 // Create a class for validation instead of using interface
 export class MealCalorieDistributionDto {
+  @ApiProperty({
+    description: 'Name of the meal',
+    example: 'Breakfast',
+  })
   @IsString()
+  @IsNotEmpty()
   mealName: string;
 
+  @ApiProperty({
+    description: 'Percentage of daily calories',
+    example: 25,
+    minimum: 0,
+    maximum: 100,
+  })
   @IsNumber()
+  @Min(0)
   percentage: number;
 
+  @ApiProperty({
+    description: 'Calculated calorie amount',
+    example: 500,
+    required: false,
+  })
   @IsNumber()
   @IsOptional()
   calorieAmount?: number;
@@ -18,7 +46,7 @@ export class MealCalorieDistributionDto {
 export class CreateMealPlanDto {
   @ApiProperty({
     description: 'Name of the meal plan',
-    example: 'Ramadan Plan'
+    example: 'Ramadan Plan',
   })
   @IsString()
   @IsNotEmpty()
@@ -27,7 +55,7 @@ export class CreateMealPlanDto {
   @ApiProperty({
     description: 'Description of the plan',
     required: false,
-    example: 'Balanced diet plan for Ramadan'
+    example: 'Balanced diet plan for Ramadan',
   })
   @IsString()
   @IsOptional()
@@ -37,28 +65,28 @@ export class CreateMealPlanDto {
     description: 'Daily target calories',
     required: false,
     default: 2000,
-    example: 2000
+    example: 2000,
   })
   @IsNumber()
   @IsOptional()
-  targetCalories?: number = 2000;
+  targetCalories?: number;
 
   @ApiProperty({
     description: 'Start date of the plan',
     required: false,
     type: Date,
-    example: '2024-03-10'
+    example: '2024-03-10',
   })
   @IsDate()
   @Type(() => Date)
   @IsOptional()
-  startDate?: Date = new Date();
+  startDate?: Date;
 
   @ApiProperty({
     description: 'End date of the plan',
     required: false,
     type: Date,
-    example: '2024-04-10'
+    example: '2024-04-10',
   })
   @IsDate()
   @Type(() => Date)
@@ -68,14 +96,26 @@ export class CreateMealPlanDto {
   @ApiProperty({
     description: 'Custom calorie distribution for meals',
     required: false,
-    type: [MealCalorieDistributionDto]
+    type: [MealCalorieDistributionDto],
+    example: [
+      { mealName: 'Breakfast', percentage: 25 },
+      { mealName: 'Lunch', percentage: 40 },
+      { mealName: 'Dinner', percentage: 35 },
+    ],
   })
   @ValidateNested({ each: true })
   @Type(() => MealCalorieDistributionDto)
+  @IsArray()
   @IsOptional()
-  calorieDistribution?: MealCalorieDistributionDto[] = [
-    { mealName: 'Breakfast', percentage: 25 },
-    { mealName: 'Lunch', percentage: 40 },
-    { mealName: 'Dinner', percentage: 35 }
-  ];
+  calorieDistribution?: MealCalorieDistributionDto[];
+
+  @ApiProperty({
+    description: 'Whether to create meals automatically',
+    required: false,
+    default: true,
+    example: true,
+  })
+  @IsBoolean()
+  @IsOptional()
+  createMealsAutomatically?: boolean;
 }
