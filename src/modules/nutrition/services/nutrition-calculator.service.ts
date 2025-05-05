@@ -1,329 +1,347 @@
 import { Injectable } from '@nestjs/common';
-import { MealFood } from '../entities/meal-food.entity';
-import { DailyNutritionSummary, SimplifiedMeal, NutrientInfo } from '../interfaces/daily-nutrition-summary.interface';
-import { NutrientCalculation } from '../types/nutrition.types';
+import { Food } from '../../food/entities/food.entity';
 import { Meal } from '../entities/meal.entity';
+import { MealFood } from '../entities/meal-food.entity';
+import { NutrientColumns } from '../entities/embedded/nutrient-columns.entity';
+import { DailyNutritionSummary } from '../interfaces/daily-nutrition-summary.interface';
+import { WeeklyNutritionSummary } from '../interfaces/weekly-nutrition-summary.interface';
 
 @Injectable()
 export class NutritionCalculatorService {
-  calculateNutrients(food: any, servingSize: number): NutrientCalculation {
+  calculateNutrients(food: Food, servingSize: number): NutrientColumns {
     const ratio = servingSize / (food.servingSize || 100);
-    
+
     return {
-      calories: (4 * (food.protein || 0) + 4 * (food.carbohydrates || 0) + 9 * (food.fat || 0)) * ratio,
-      protein: (food.protein || 0) * ratio,
-      carbohydrates: (food.carbohydrates || 0) * ratio,
-      fat: (food.fat || 0) * ratio,
-      fiber: (food.fiber || 0) * ratio,
-      sugar: (food.sugar || 0) * ratio,
-      sodium: (food.sodium || 0) * ratio,
-      cholesterol: (food.cholesterol || 0) * ratio
+      calories: food.calories ? food.calories * ratio : 0,
+      protein: food.protein ? food.protein * ratio : 0,
+      carbohydrates: food.carbohydrates ? food.carbohydrates * ratio : 0,
+      fat: food.fat ? food.fat * ratio : 0,
+      fiber: food.fiber ? food.fiber * ratio : 0,
+      sugar: food.sugar ? food.sugar * ratio : 0,
+      sodium: food.sodium ? food.sodium * ratio : 0,
+      cholesterol: food.cholesterol ? food.cholesterol * ratio : 0,
     };
-  }
-
-  calculateDailyNutrition(date: Date, mealFoods: MealFood[]): DailyNutritionSummary {
-    console.log('Calculating nutrition for date:', date);
-    console.log('Number of meal foods:', mealFoods.length);
-
-    const summary: DailyNutritionSummary = {
-      date: date,
-      summary: {
-        calories: {
-          target: 0,
-          eaten: 0,
-          remaining: 0
-        },
-        mainNutrients: {
-          protein: { amount: 0, unit: 'g', percentage: 0 },
-          carbs: { amount: 0, unit: 'g', percentage: 0 },
-          fat: { amount: 0, unit: 'g', percentage: 0 }
-        },
-        additionalNutrients: {
-          fiber: { amount: 0, unit: 'g' },
-          sugar: { amount: 0, unit: 'g' },
-          sodium: { amount: 0, unit: 'mg' },
-          cholesterol: { amount: 0, unit: 'mg' }
-        }
-      },
-      meals: [],
-      progress: {
-        mealsEaten: 0,
-        totalMeals: 0,
-        percentage: 0
-      },
-      mealDistribution: []
-    };
-
-    const mealSummaries = new Map<string, SimplifiedMeal>();
-    let totalCaloriesEaten = 0;
-    let targetCalories = 0;
-
-    for (const mealFood of mealFoods) {
-      if (!mealFood.food || !mealFood.meal) {
-        console.log('Skipping meal food due to missing food or meal:', mealFood);
-        continue;
-      }
-
-      const { food, meal } = mealFood;
-      
-      if (!mealSummaries.has(meal.id)) {
-        mealSummaries.set(meal.id, {
-          id: meal.id,
-          name: meal.name,
-          time: meal.targetTime.toTimeString().slice(0, 5),
-          status: meal.eaten ? 'eaten' : 'not_eaten',
-          calories: {
-            target: meal.targetCalories || 0,
-            actual: 0
-          },
-          foods: []
-        });
-
-        targetCalories += meal.targetCalories || 0;
-        if (meal.eaten) {
-          summary.progress.mealsEaten++;
-        }
-        summary.progress.totalMeals++;
-      }
-
-      const currentMeal = mealSummaries.get(meal.id);
-      const nutrients = this.calculateNutrients(food, mealFood.servingSize);
-
-      if (mealFood.eaten) {
-        totalCaloriesEaten += nutrients.calories;
-        currentMeal.calories.actual += nutrients.calories;
-        
-        summary.summary.mainNutrients.protein.amount += nutrients.protein;
-        summary.summary.mainNutrients.carbs.amount += nutrients.carbohydrates;
-        summary.summary.mainNutrients.fat.amount += nutrients.fat;
-        
-        summary.summary.additionalNutrients.fiber.amount += nutrients.fiber;
-        summary.summary.additionalNutrients.sugar.amount += nutrients.sugar;
-        summary.summary.additionalNutrients.sodium.amount += nutrients.sodium;
-        summary.summary.additionalNutrients.cholesterol.amount += nutrients.cholesterol;
-      }
-
-      currentMeal.foods.push({
-        name: food.name,
-        amount: `${mealFood.servingSize}${mealFood.servingUnit}`,
-        calories: nutrients.calories,
-        eaten: mealFood.eaten
-      });
-    }
-
-    summary.summary.calories = {
-      target: targetCalories,
-      eaten: totalCaloriesEaten,
-      remaining: targetCalories - totalCaloriesEaten
-    };
-
-    if (totalCaloriesEaten > 0) {
-      summary.summary.mainNutrients.protein.percentage = 
-        (summary.summary.mainNutrients.protein.amount * 4 / totalCaloriesEaten) * 100;
-      summary.summary.mainNutrients.carbs.percentage = 
-        (summary.summary.mainNutrients.carbs.amount * 4 / totalCaloriesEaten) * 100;
-      summary.summary.mainNutrients.fat.percentage = 
-        (summary.summary.mainNutrients.fat.amount * 9 / totalCaloriesEaten) * 100;
-    }
-
-    summary.progress.percentage = 
-      summary.progress.totalMeals > 0 ? 
-      (summary.progress.mealsEaten / summary.progress.totalMeals) * 100 : 0;
-
-    summary.meals = Array.from(mealSummaries.values());
-
-    return summary;
   }
 
   calculateMealNutrition(meal: Meal) {
-    if (!meal.mealFoods?.length) {
+    if (!meal || !meal.mealFoods || meal.mealFoods.length === 0) {
       return {
-        name: meal.name,
-        targetTime: meal.targetTime,
-        status: {
-          eaten: meal.eaten,
-          eatenAt: meal.eatenAt,
-          onTime: meal.eatenAt ? meal.eatenAt <= meal.targetTime : null
+        totalNutrients: {
+          calories: 0,
+          protein: 0,
+          carbohydrates: 0,
+          fat: 0,
+          fiber: 0,
+          sugar: 0,
+          sodium: 0,
+          cholesterol: 0,
         },
-        nutrition: {
-          target: {
-            calories: meal.targetCalories || 0,
-            ...meal.nutritionGoals
-          },
-          actual: {
-            calories: 0,
-            protein: 0,
-            carbs: 0,
-            fat: 0
-          },
-          progress: {
-            percentage: 0,
-            remaining: meal.targetCalories || 0
-          }
-        },
-        foods: []
+        foods: [],
+        eaten: meal?.eaten || false,
+        eatenAt: meal?.eatenAt || null,
       };
     }
 
-    const summary = {
-      name: meal.name,
-      targetTime: meal.targetTime,
-      status: {
-        eaten: meal.eaten,
-        eatenAt: meal.eatenAt,
-        onTime: meal.eatenAt ? meal.eatenAt <= meal.targetTime : null
-      },
-      nutrition: {
-        target: {
-          calories: meal.targetCalories || 0,
-          ...meal.nutritionGoals
-        },
-        actual: {
-          calories: 0,
-          protein: 0,
-          carbs: 0,
-          fat: 0
-        },
-        progress: {
-          percentage: 0,
-          remaining: meal.targetCalories || 0
-        }
-      },
-      foods: []
+    const totalNutrients = {
+      calories: 0,
+      protein: 0,
+      carbohydrates: 0,
+      fat: 0,
+      fiber: 0,
+      sugar: 0,
+      sodium: 0,
+      cholesterol: 0,
     };
 
-    for (const mealFood of meal.mealFoods) {
-      const nutrients = this.calculateNutrients(mealFood.food, mealFood.servingSize);
-      
-      // Add food to the list with its status
-      summary.foods.push({
+    // Calculate total nutrients from all meal foods
+    const foods = meal.mealFoods.map((mealFood) => {
+      // Initialize nutrients as a NutrientColumns object with default values
+      const nutrients: NutrientColumns = mealFood.nutrients || {
+        calories: 0,
+        protein: 0,
+        carbohydrates: 0,
+        fat: 0,
+        fiber: 0,
+        sugar: 0,
+        sodium: 0,
+        cholesterol: 0,
+      };
+
+      // Add to totals
+      totalNutrients.calories += nutrients.calories || 0;
+      totalNutrients.protein += nutrients.protein || 0;
+      totalNutrients.carbohydrates += nutrients.carbohydrates || 0;
+      totalNutrients.fat += nutrients.fat || 0;
+      totalNutrients.fiber += nutrients.fiber || 0;
+      totalNutrients.sugar += nutrients.sugar || 0;
+      totalNutrients.sodium += nutrients.sodium || 0;
+      totalNutrients.cholesterol += nutrients.cholesterol || 0;
+
+      // Return food info with nutrients
+      return {
         id: mealFood.id,
-        name: mealFood.food.name,
-        serving: {
-          size: mealFood.servingSize,
-          unit: mealFood.servingUnit
-        },
-        nutrients: {
-          calories: nutrients.calories,
-          protein: nutrients.protein,
-          carbs: nutrients.carbohydrates,
-          fat: nutrients.fat
-        },
-        status: {
-          eaten: mealFood.eaten,
-          eatenAt: mealFood.eatenAt,
-          onTime: mealFood.eatenAt ? mealFood.eatenAt <= meal.targetTime : null
-        }
-      });
+        foodId: mealFood.food?.id,
+        name: mealFood.food?.name || 'Unknown Food',
+        servingSize: mealFood.servingSize,
+        servingUnit: mealFood.servingUnit,
+        nutrients: nutrients,
+      };
+    });
 
-      // Only add to totals if eaten
-      if (mealFood.eaten) {
-        summary.nutrition.actual.calories += nutrients.calories;
-        summary.nutrition.actual.protein += nutrients.protein;
-        summary.nutrition.actual.carbs += nutrients.carbohydrates;
-        summary.nutrition.actual.fat += nutrients.fat;
-      }
-    }
-
-    // Calculate progress
-    if (summary.nutrition.target.calories > 0) {
-      summary.nutrition.progress.percentage = 
-        (summary.nutrition.actual.calories / summary.nutrition.target.calories) * 100;
-      summary.nutrition.progress.remaining = 
-        summary.nutrition.target.calories - summary.nutrition.actual.calories;
-    }
-
-    return summary;
+    return {
+      totalNutrients,
+      foods,
+      eaten: meal.eaten || false,
+      eatenAt: meal.eatenAt || null,
+    };
   }
 
-  calculateWeeklyNutrition(startDate: Date, endDate: Date, dailySummaries: DailyNutritionSummary[]) {
+  async calculateDailyNutrition(
+    date: Date,
+    meals: Meal[],
+  ): Promise<DailyNutritionSummary> {
+    // Set up totals and summaries
+    const totalNutrients = {
+      calories: 0,
+      protein: 0,
+      carbohydrates: 0,
+      fat: 0,
+      fiber: 0,
+      sugar: 0,
+      sodium: 0,
+      cholesterol: 0,
+    };
+
+    const mealsEaten = meals.filter((meal) => meal.eaten).length;
+    const mealsData = [];
+    const mealDistribution = [];
+
+    // Process each meal
+    for (const meal of meals) {
+      const mealNutrition = this.calculateMealNutrition(meal);
+      
+      // Only count nutrients from eaten meals
+      if (meal.eaten) {
+        totalNutrients.calories += mealNutrition.totalNutrients.calories;
+        totalNutrients.protein += mealNutrition.totalNutrients.protein;
+        totalNutrients.carbohydrates += mealNutrition.totalNutrients.carbohydrates;
+        totalNutrients.fat += mealNutrition.totalNutrients.fat;
+        totalNutrients.fiber += mealNutrition.totalNutrients.fiber;
+        totalNutrients.sugar += mealNutrition.totalNutrients.sugar;
+        totalNutrients.sodium += mealNutrition.totalNutrients.sodium;
+        totalNutrients.cholesterol += mealNutrition.totalNutrients.cholesterol;
+      }
+
+      // Add to meal distribution
+      mealDistribution.push({
+        mealId: meal.id,
+        name: meal.name,
+        targetTime: meal.targetTime,
+        targetCalories: meal.targetCalories,
+        actualCalories: mealNutrition.totalNutrients.calories,
+        eaten: meal.eaten,
+        eatenAt: meal.eatenAt,
+      });
+
+      // Add to meals data
+      mealsData.push({
+        id: meal.id,
+        name: meal.name,
+        targetTime: meal.targetTime,
+        totalNutrients: mealNutrition.totalNutrients,
+        foods: mealNutrition.foods,
+        eaten: meal.eaten,
+        eatenAt: meal.eatenAt,
+      });
+    }
+
+    // Calculate target calories from meal plan
+    let targetCalories = 0;
+    if (meals.length > 0 && meals[0].mealPlan) {
+      targetCalories = meals[0].mealPlan.targetCalories || 0;
+    }
+
+    // Calculate macronutrient percentages
+    const totalCaloriesFromMacros =
+      totalNutrients.protein * 4 +
+      totalNutrients.carbohydrates * 4 +
+      totalNutrients.fat * 9;
+
+    const proteinPercentage =
+      totalCaloriesFromMacros > 0
+        ? (totalNutrients.protein * 4) / totalCaloriesFromMacros
+        : 0;
+    const carbsPercentage =
+      totalCaloriesFromMacros > 0
+        ? (totalNutrients.carbohydrates * 4) / totalCaloriesFromMacros
+        : 0;
+    const fatPercentage =
+      totalCaloriesFromMacros > 0
+        ? (totalNutrients.fat * 9) / totalCaloriesFromMacros
+        : 0;
+
+    // Compile the summary
+    return {
+      date: date,
+      summary: {
+        calories: {
+          target: targetCalories,
+          eaten: totalNutrients.calories,
+          remaining: Math.max(0, targetCalories - totalNutrients.calories),
+        },
+        mainNutrients: {
+          protein: {
+            amount: totalNutrients.protein,
+            unit: 'g',
+            percentage: Math.round(proteinPercentage * 100),
+          },
+          carbs: {
+            amount: totalNutrients.carbohydrates,
+            unit: 'g',
+            percentage: Math.round(carbsPercentage * 100),
+          },
+          fat: {
+            amount: totalNutrients.fat,
+            unit: 'g',
+            percentage: Math.round(fatPercentage * 100),
+          },
+        },
+        additionalNutrients: {
+          fiber: {
+            amount: totalNutrients.fiber,
+            unit: 'g',
+          },
+          sugar: {
+            amount: totalNutrients.sugar,
+            unit: 'g',
+          },
+          sodium: {
+            amount: totalNutrients.sodium,
+            unit: 'mg',
+          },
+          cholesterol: {
+            amount: totalNutrients.cholesterol,
+            unit: 'mg',
+          },
+        },
+      },
+      meals: mealsData,
+      progress: {
+        mealsEaten: mealsEaten,
+        totalMeals: meals.length,
+        percentage:
+          meals.length > 0 ? Math.round((mealsEaten / meals.length) * 100) : 0,
+      },
+      mealDistribution: mealDistribution,
+    };
+  }
+
+  calculateWeeklyNutrition(
+    startDate: Date,
+    endDate: Date,
+    dailySummaries: DailyNutritionSummary[],
+  ): WeeklyNutritionSummary {
+    // Initialize totals for the week
     const weeklyTotals = {
       calories: {
         target: 0,
         eaten: 0,
-        average: 0
       },
-      nutrients: {
-        protein: { amount: 0, unit: 'g' },
-        carbs: { amount: 0, unit: 'g' },
-        fat: { amount: 0, unit: 'g' }
-      },
-      progress: {
-        totalMealsEaten: 0,
-        totalMealsPlanned: 0,
-        percentage: 0
-      }
+      protein: 0,
+      carbohydrates: 0,
+      fat: 0,
+      fiber: 0,
+      sugar: 0,
+      sodium: 0,
+      cholesterol: 0,
     };
 
-    // Calculate totals
-    dailySummaries.forEach(day => {
-      weeklyTotals.calories.target += day.summary.calories.target;
-      weeklyTotals.calories.eaten += day.summary.calories.eaten;
-      
-      weeklyTotals.nutrients.protein.amount += day.summary.mainNutrients.protein.amount;
-      weeklyTotals.nutrients.carbs.amount += day.summary.mainNutrients.carbs.amount;
-      weeklyTotals.nutrients.fat.amount += day.summary.mainNutrients.fat.amount;
+    const dailyData = [];
 
-      weeklyTotals.progress.totalMealsEaten += day.progress.mealsEaten;
-      weeklyTotals.progress.totalMealsPlanned += day.progress.totalMeals;
-    });
+    // Process each day's summary
+    for (const daily of dailySummaries) {
+      // Add to weekly totals
+      weeklyTotals.calories.target += daily.summary.calories.target;
+      weeklyTotals.calories.eaten += daily.summary.calories.eaten;
+      weeklyTotals.protein += daily.summary.mainNutrients.protein.amount;
+      weeklyTotals.carbohydrates += daily.summary.mainNutrients.carbs.amount;
+      weeklyTotals.fat += daily.summary.mainNutrients.fat.amount;
+      weeklyTotals.fiber += daily.summary.additionalNutrients.fiber.amount;
+      weeklyTotals.sugar += daily.summary.additionalNutrients.sugar.amount;
+      weeklyTotals.sodium += daily.summary.additionalNutrients.sodium.amount;
+      weeklyTotals.cholesterol +=
+        daily.summary.additionalNutrients.cholesterol.amount;
 
-    // Calculate averages
-    if (dailySummaries.length > 0) {
-      weeklyTotals.calories.average = weeklyTotals.calories.eaten / dailySummaries.length;
-      weeklyTotals.progress.percentage = (weeklyTotals.progress.totalMealsEaten / weeklyTotals.progress.totalMealsPlanned) * 100;
+      // Add to daily data array
+      dailyData.push({
+        date: daily.date,
+        calories: {
+          target: daily.summary.calories.target,
+          eaten: daily.summary.calories.eaten,
+        },
+        macroNutrients: {
+          protein: daily.summary.mainNutrients.protein.amount,
+          carbs: daily.summary.mainNutrients.carbs.amount,
+          fat: daily.summary.mainNutrients.fat.amount,
+        },
+        progress: daily.progress,
+      });
     }
 
-    return {
-      period: {
-        startDate,
-        endDate
+    // Calculate averages (avoid division by zero)
+    const daysCount = Math.max(1, dailySummaries.length);
+    const averages = {
+      calories: {
+        target: weeklyTotals.calories.target / daysCount,
+        eaten: weeklyTotals.calories.eaten / daysCount,
       },
-      summary: weeklyTotals,
-      dailyBreakdown: dailySummaries.map(day => ({
-        date: day.date,
-        calories: day.summary.calories,
-        progress: day.progress
-      }))
+      protein: weeklyTotals.protein / daysCount,
+      carbohydrates: weeklyTotals.carbohydrates / daysCount,
+      fat: weeklyTotals.fat / daysCount,
     };
-  }
 
-  calculateMealDistribution(targetCalories: number, distribution: { mealName: string; percentage: number }[]) {
-    const mealCalories = distribution.map(meal => ({
-      name: meal.mealName,
-      targetCalories: Math.round((meal.percentage / 100) * targetCalories),
-      percentage: meal.percentage,
-      recommendedNutrients: {
-        protein: Math.round((meal.percentage / 100) * targetCalories * 0.25 / 4), // 25% from protein
-        carbs: Math.round((meal.percentage / 100) * targetCalories * 0.5 / 4),   // 50% from carbs
-        fat: Math.round((meal.percentage / 100) * targetCalories * 0.25 / 9)     // 25% from fat
-      }
-    }));
+    // Calculate caloric distribution percentages
+    const totalCaloriesFromMacros =
+      weeklyTotals.protein * 4 +
+      weeklyTotals.carbohydrates * 4 +
+      weeklyTotals.fat * 9;
 
+    const macroDistribution = {
+      protein:
+        totalCaloriesFromMacros > 0
+          ? (weeklyTotals.protein * 4) / totalCaloriesFromMacros
+          : 0,
+      carbs:
+        totalCaloriesFromMacros > 0
+          ? (weeklyTotals.carbohydrates * 4) / totalCaloriesFromMacros
+          : 0,
+      fat:
+        totalCaloriesFromMacros > 0
+          ? (weeklyTotals.fat * 9) / totalCaloriesFromMacros
+          : 0,
+    };
+
+    // Calculate percentage of target achieved
+    const targetAchieved =
+      weeklyTotals.calories.target > 0
+        ? weeklyTotals.calories.eaten / weeklyTotals.calories.target
+        : 0;
+
+    // Create the weekly summary with the correct interface
     return {
-      meals: mealCalories,
+      startDate,
+      endDate,
+      dailyData,
       summary: {
-        totalCalories: targetCalories,
-        distribution: mealCalories.map(meal => ({
-          name: meal.name,
-          calories: meal.targetCalories,
-          percentage: meal.percentage,
-          macronutrients: {
-            protein: {
-              grams: meal.recommendedNutrients.protein,
-              calories: meal.recommendedNutrients.protein * 4
-            },
-            carbs: {
-              grams: meal.recommendedNutrients.carbs,
-              calories: meal.recommendedNutrients.carbs * 4
-            },
-            fat: {
-              grams: meal.recommendedNutrients.fat,
-              calories: meal.recommendedNutrients.fat * 9
-            }
-          }
-        }))
-      }
+        weeklyTotals,
+        averages,
+        macroDistribution: {
+          protein: Math.round(macroDistribution.protein * 100),
+          carbs: Math.round(macroDistribution.carbs * 100),
+          fat: Math.round(macroDistribution.fat * 100),
+        },
+        targetAchieved: Math.round(targetAchieved * 100),
+      },
     };
   }
-} 
+}

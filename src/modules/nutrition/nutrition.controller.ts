@@ -43,7 +43,6 @@ import { MealFood } from './entities/meal-food.entity';
 import { DailyNutritionSummary } from './interfaces/daily-nutrition-summary.interface';
 import { DuplicateMealsDto } from './dto/duplicate-meals.dto';
 import { NutritionCalculatorService } from './services/nutrition-calculator.service';
-import { MarkFoodEatenDto } from './dto/mark-foodEaten.dto';
 import { FoodSearchDto } from '@modules/food/dto/food-search.dto';
 
 @ApiTags('Nutrition')
@@ -60,12 +59,14 @@ export class NutritionController {
   ) {}
 
   @Post('meal-plans')
-  @UsePipes(new ValidationPipe({ 
-    transform: true, 
-    whitelist: true,
-    forbidNonWhitelisted: true,
-    forbidUnknownValues: true
-  }))
+  @UsePipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      forbidUnknownValues: true,
+    }),
+  )
   @ApiOperation({ summary: 'Create a new meal plan' })
   async createMealPlan(
     @Body() dto: CreateMealPlanDto,
@@ -73,8 +74,9 @@ export class NutritionController {
   ): Promise<MealPlan> {
     // Filter out empty calorieDistribution objects before passing to service
     if (dto.calorieDistribution?.length) {
-      dto.calorieDistribution = dto.calorieDistribution.filter(meal => 
-        meal && meal.mealName && typeof meal.percentage === 'number');
+      dto.calorieDistribution = dto.calorieDistribution.filter(
+        (meal) => meal && meal.mealName && typeof meal.percentage === 'number',
+      );
     }
     return this.mealPlanService.createMealPlan(dto, req.user);
   }
@@ -227,23 +229,6 @@ export class NutritionController {
     return this.mealService.removeFoodFromMeal(mealId, foodId, req.user);
   }
 
-  @Put('meals/:mealId/foods/:foodId/toggle-eaten')
-  @ApiOperation({ summary: 'Toggle food eaten status' })
-  @ApiParam({ name: 'mealId', type: String, description: 'Meal ID' })
-  @ApiParam({ name: 'foodId', type: String, description: 'Food ID' })
-  @ApiOkResponse({
-    description: 'Food status toggled successfully',
-    type: Boolean,
-  })
-  @ApiNotFoundResponse({ description: 'Food not found in meal' })
-  async toggleFoodEaten(
-    @Param('mealId', ParseUUIDPipe) mealId: string,
-    @Param('foodId', ParseUUIDPipe) foodId: string,
-    @Request() req,
-  ): Promise<boolean> {
-    return this.mealService.toggleFoodEaten(mealId, foodId, req.user);
-  }
-
   @Put('meals/:id/toggle-eaten')
   @ApiOperation({ summary: 'Toggle meal eaten status' })
   @ApiParam({ name: 'id', type: String, description: 'Meal ID' })
@@ -308,9 +293,14 @@ export class NutritionController {
       const mealFoods = meals.flatMap((meal) => meal.mealFoods || []);
       console.log(`Total meal foods: ${mealFoods.length}`);
 
+      // Recalculate nutrition for all meals to ensure we have the latest data
+      for (const meal of meals) {
+        await this.mealService.recalculateMealNutrition(meal);
+      }
+
       const summary = await this.nutritionCalculator.calculateDailyNutrition(
         targetDate,
-        mealFoods,
+        meals,
       );
 
       if (meals[0]?.mealPlan) {
@@ -349,12 +339,16 @@ export class NutritionController {
           currentDate,
           req.user,
         );
-        const mealFoods = meals.flatMap((m) => m.mealFoods || []);
+
+        // Recalculate nutrition for all meals to ensure we have the latest data
+        for (const meal of meals) {
+          await this.mealService.recalculateMealNutrition(meal);
+        }
 
         const dailySummary =
           await this.nutritionCalculator.calculateDailyNutrition(
             new Date(currentDate),
-            mealFoods,
+            meals,
           );
         dailySummaries.push(dailySummary);
 
@@ -383,6 +377,10 @@ export class NutritionController {
   @ApiNotFoundResponse({ description: 'Meal not found' })
   async getMealNutrition(@Param('id') mealId: string, @Request() req) {
     const meal = await this.mealService.getMealById(mealId, req.user);
+
+    // Ensure we have the latest nutrition data
+    await this.mealService.recalculateMealNutrition(meal);
+
     return this.nutritionCalculator.calculateMealNutrition(meal);
   }
 
@@ -404,5 +402,25 @@ export class NutritionController {
     @Request() req,
   ): Promise<MealPlan> {
     return this.mealPlanService.duplicateMealPlan(id, req.user);
+  }
+
+  @Post('meal-plans/:id/daily-meals')
+  @ApiOperation({
+    summary: 'Create daily meals from template for a specific date',
+  })
+  @ApiParam({ name: 'id', type: String, description: 'Meal plan ID' })
+  @ApiQuery({ name: 'date', required: true, type: String })
+  @ApiCreatedResponse({
+    description: 'Daily meals created successfully',
+    type: [Meal],
+  })
+  @ApiNotFoundResponse({ description: 'Meal plan not found' })
+  async createDailyMealsFromTemplate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('date') dateString: string,
+    @Request() req,
+  ): Promise<Meal[]> {
+    const date = new Date(dateString);
+    return this.mealService.createDailyMealsFromTemplate(id, date, req.user);
   }
 }

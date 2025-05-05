@@ -63,133 +63,7 @@ export class MealService {
     });
   }
 
-  private async updateEatenStatus(
-    manager: any,
-    type: 'meal' | 'food',
-    id: string,
-    eaten: boolean,
-    user: User,
-  ): Promise<boolean> {
-    try {
-      const now = eaten ? new Date() : null;
-
-      if (type === 'meal') {
-        const meal = await this.getMealById(id, user);
-
-        await manager
-          .createQueryBuilder()
-          .update(MealFood)
-          .set({ eaten, eatenAt: now })
-          .where('mealId = :mealId', { mealId: id })
-          .execute();
-
-        await manager
-          .createQueryBuilder()
-          .update(Meal)
-          .set({ eaten, eatenAt: now })
-          .where('id = :id', { id })
-          .execute();
-      } else {
-        // food
-        const mealFood = await this.getMealFoodById(id, user);
-
-        // Update food status
-        await manager
-          .createQueryBuilder()
-          .update(MealFood)
-          .set({ eaten, eatenAt: now })
-          .where('id = :id', { id })
-          .execute();
-
-        // Check if all foods in meal are eaten
-        const allMealFoods = await this.mealFoodRepository.find({
-          where: { meal: { id: mealFood.meal.id } },
-        });
-
-        const allEaten = allMealFoods.every((mf) => mf.eaten);
-
-        if (allEaten !== mealFood.meal.eaten) {
-          await manager.update(Meal, mealFood.meal.id, {
-            eaten: allEaten,
-            eatenAt: allEaten ? new Date() : null,
-          });
-        }
-      }
-
-      return true;
-    } catch (error) {
-      console.error(`Error updating ${type} eaten status:`, error);
-      return false;
-    }
-  }
-
-  async markMealAsEaten(
-    mealId: string,
-    eaten: boolean,
-    user: User,
-  ): Promise<boolean> {
-    return await this.dataSource.transaction((manager) =>
-      this.updateEatenStatus(manager, 'meal', mealId, eaten, user),
-    );
-  }
-
-  async markFoodAsEaten(
-    foodId: string,
-    eaten: boolean,
-    user: User,
-  ): Promise<boolean> {
-    return await this.dataSource.transaction((manager) =>
-      this.updateEatenStatus(manager, 'food', foodId, eaten, user),
-    );
-  }
-
-  async toggleFoodEaten(
-    mealId: string,
-    foodId: string,
-    user: User,
-  ): Promise<boolean> {
-    try {
-      return await this.dataSource.transaction(async (manager) => {
-        // Get current status
-        const mealFood = await this.getMealFoodByIds(mealId, foodId, user);
-
-        if (!mealFood) {
-          throw new HttpException(
-            'Food not found in this meal',
-            HttpStatus.NOT_FOUND,
-          );
-        }
-
-        // Toggle the status
-        mealFood.eaten = !mealFood.eaten;
-        mealFood.eatenAt = mealFood.eaten ? new Date() : null;
-
-        await manager.save(mealFood);
-
-        const allMealFoods = await this.mealFoodRepository.find({
-          where: { meal: { id: mealId } },
-        });
-
-        const allEaten = allMealFoods.every((mf) => mf.eaten);
-
-        if (allEaten !== mealFood.meal.eaten) {
-          await manager.update(Meal, mealId, {
-            eaten: allEaten,
-            eatenAt: allEaten ? new Date() : null,
-          });
-        }
-
-        return mealFood.eaten;
-      });
-    } catch (error) {
-      console.error('Error toggling food eaten status:', error);
-      throw new HttpException(
-        'Failed to toggle food status',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
+  // Updated to handle eaten status at meal level only
   async toggleMealEaten(mealId: string, user: User): Promise<boolean> {
     try {
       return await this.dataSource.transaction(async (manager) => {
@@ -204,19 +78,6 @@ export class MealService {
         meal.eaten = !meal.eaten;
         meal.eatenAt = meal.eaten ? new Date() : null;
 
-        // Update all meal foods to match meal status
-        if (meal.mealFoods) {
-          await manager
-            .createQueryBuilder()
-            .update(MealFood)
-            .set({
-              eaten: meal.eaten,
-              eatenAt: meal.eatenAt,
-            })
-            .where('mealId = :mealId', { mealId })
-            .execute();
-        }
-
         await manager.save(meal);
 
         return meal.eaten;
@@ -225,6 +86,34 @@ export class MealService {
       console.error('Error toggling meal eaten status:', error);
       throw new HttpException(
         'Failed to toggle meal status',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async markMealAsEaten(
+    mealId: string,
+    eaten: boolean,
+    user: User,
+  ): Promise<boolean> {
+    try {
+      return await this.dataSource.transaction(async (manager) => {
+        const meal = await this.getMealById(mealId, user);
+
+        if (!meal) {
+          throw new HttpException('Meal not found', HttpStatus.NOT_FOUND);
+        }
+
+        meal.eaten = eaten;
+        meal.eatenAt = eaten ? new Date() : null;
+
+        await manager.save(meal);
+        return meal.eaten;
+      });
+    } catch (error) {
+      console.error('Error marking meal as eaten:', error);
+      throw new HttpException(
+        'Failed to update meal status',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -246,6 +135,7 @@ export class MealService {
     return meal;
   }
 
+  // Enhanced food addition with simplified approach
   async addFoodToMeal(
     mealId: string,
     dto: AddFoodToMealDto,
@@ -332,7 +222,7 @@ export class MealService {
         );
       }
 
-      // Calculate nutrients based on serving size
+      // Calculate nutrients based on serving size - compute on demand instead of storing static values
       const servingSize = dto.servingSize || 100;
       const nutrients = this.nutritionCalculator.calculateNutrients(
         food,
@@ -355,11 +245,47 @@ export class MealService {
           sodium: nutrients.sodium || 0,
           cholesterol: nutrients.cholesterol || 0,
         },
-        eaten: false,
       });
 
-      const savedMealFood = await manager.save(mealFood);
-      return savedMealFood;
+      return await manager.save(mealFood);
+    });
+  }
+
+  // Add method for recalculating nutrients for meal foods
+  async recalculateMealNutrition(meal: Meal): Promise<void> {
+    await this.dataSource.transaction(async (manager) => {
+      if (!meal.mealFoods || meal.mealFoods.length === 0) {
+        return;
+      }
+
+      for (const mealFood of meal.mealFoods) {
+        // Re-fetch the food to ensure we have the latest nutrition data
+        const food = await this.foodRepository.findOne({
+          where: { id: mealFood.food.id },
+        });
+
+        if (food) {
+          // Recalculate nutrients with current food data
+          const nutrients = this.nutritionCalculator.calculateNutrients(
+            food,
+            mealFood.servingSize,
+          );
+
+          // Update the meal food with fresh nutrient values
+          mealFood.nutrients = {
+            calories: nutrients.calories || 0,
+            protein: nutrients.protein || 0,
+            carbohydrates: nutrients.carbohydrates || 0,
+            fat: nutrients.fat || 0,
+            fiber: nutrients.fiber || 0,
+            sugar: nutrients.sugar || 0,
+            sodium: nutrients.sodium || 0,
+            cholesterol: nutrients.cholesterol || 0,
+          };
+
+          await manager.save(mealFood);
+        }
+      }
     });
   }
 
@@ -372,14 +298,24 @@ export class MealService {
       const mealFood = await this.getMealFoodById(id, user);
 
       if (dto.servingSize) {
-        const nutrients = this.nutritionCalculator.calculateNutrients(
-          mealFood.food,
-          dto.servingSize,
-        );
-        Object.assign(mealFood, { nutrients });
+        // Get fresh food data and recalculate nutrients
+        const food = await this.foodRepository.findOne({
+          where: { id: mealFood.food.id },
+        });
+
+        if (food) {
+          const nutrients = this.nutritionCalculator.calculateNutrients(
+            food,
+            dto.servingSize,
+          );
+          mealFood.nutrients = nutrients;
+        }
       }
 
-      Object.assign(mealFood, dto);
+      // Update other properties
+      if (dto.servingSize) mealFood.servingSize = dto.servingSize;
+      if (dto.servingUnit) mealFood.servingUnit = dto.servingUnit;
+
       return await manager.save(mealFood);
     });
   }
@@ -433,8 +369,6 @@ export class MealService {
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
-    console.log('Searching for meals between:', startOfDay, 'and', endOfDay);
-
     const meals = await this.mealRepository
       .createQueryBuilder('meal')
       .leftJoinAndSelect('meal.mealPlan', 'mealPlan')
@@ -449,7 +383,11 @@ export class MealService {
       .orderBy('meal.targetTime', 'ASC')
       .getMany();
 
-    console.log(`Found ${meals.length} meals for date ${date}`);
+    // Ensure fresh nutrition data
+    for (const meal of meals) {
+      await this.recalculateMealNutrition(meal);
+    }
+
     return meals;
   }
 
@@ -534,11 +472,6 @@ export class MealService {
       try {
         // Remove the meal
         await manager.remove(meal);
-
-        // Ensure meals are removed from cache
-        if (meal.mealPlan) {
-          await manager.query('PRAGMA foreign_keys = ON;');
-        }
       } catch (error) {
         console.error('Error deleting meal:', error);
         throw new HttpException(
@@ -546,6 +479,76 @@ export class MealService {
           HttpStatus.INTERNAL_SERVER_ERROR,
         );
       }
+    });
+  }
+
+  // New method to create daily instances of meals in a meal plan
+  async createDailyMealsFromTemplate(
+    mealPlanId: string,
+    date: Date,
+    user: User,
+  ): Promise<Meal[]> {
+    return await this.dataSource.transaction(async (manager) => {
+      const mealPlan = await this.mealPlanService.getMealPlanById(
+        mealPlanId,
+        user,
+      );
+
+      // Find the template meals for this plan
+      const templateMeals = await this.mealRepository.find({
+        where: { mealPlan: { id: mealPlan.id } },
+        relations: ['mealFoods', 'mealFoods.food'],
+      });
+
+      if (!templateMeals || templateMeals.length === 0) {
+        return [];
+      }
+
+      const targetDay = new Date(date);
+      targetDay.setHours(0, 0, 0, 0);
+
+      // Check if meals already exist for this date
+      const existingMeals = await this.getMealsByDate(targetDay, user);
+      if (existingMeals.length > 0) {
+        return existingMeals; // Don't create duplicates
+      }
+
+      const newMeals: Meal[] = [];
+
+      // Create a copy of each template meal for the target date
+      for (const template of templateMeals) {
+        // Create new meal
+        const newMeal = manager.create(Meal, {
+          name: template.name,
+          targetCalories: template.targetCalories,
+          nutritionGoals: template.nutritionGoals,
+          targetTime: template.targetTime, // Keep same time
+          mealPlan: { id: mealPlan.id },
+          eaten: false,
+          eatenAt: null,
+        });
+
+        const savedMeal = await manager.save(newMeal);
+
+        // Copy foods
+        if (template.mealFoods && template.mealFoods.length > 0) {
+          for (const mealFood of template.mealFoods) {
+            const newMealFood = manager.create(MealFood, {
+              meal: { id: savedMeal.id },
+              food: { id: mealFood.food.id },
+              servingSize: mealFood.servingSize,
+              servingUnit: mealFood.servingUnit,
+              nutrients: { ...mealFood.nutrients },
+            });
+
+            await manager.save(newMealFood);
+          }
+        }
+
+        newMeals.push(savedMeal);
+      }
+
+      return newMeals;
     });
   }
 }
