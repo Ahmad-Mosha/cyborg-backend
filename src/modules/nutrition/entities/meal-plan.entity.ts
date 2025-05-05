@@ -30,6 +30,6 @@ export class MealPlan extends BaseEntity {
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   user: User;
 
-  @OneToMany(() => Meal, meal => meal.mealPlan, { cascade: true })
+  @OneToMany(() => Meal, (meal) => meal.mealPlan, { cascade: true })
   meals: Meal[];
 }

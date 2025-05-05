@@ -420,4 +420,37 @@ export class FoodService {
       );
     }
   }
+
+  /**
+   * Create a food item from provided data
+   * This method supports both custom foods and foods from external sources
+   */
+  async createFood(foodData: Partial<Food>, user: User): Promise<Food> {
+    try {
+      // Set defaults for missing values
+      const foodToSave = this.foodRepository.create({
+        ...foodData,
+        servingSize: foodData.servingSize || 100,
+        servingUnit: foodData.servingUnit || 'g',
+        user: { id: user.id },
+        // Set nutrition fields to 0 if not provided
+        calories: foodData.calories || 0,
+        protein: foodData.protein || 0,
+        carbohydrates: foodData.carbohydrates || 0,
+        fat: foodData.fat || 0,
+        fiber: foodData.fiber || 0,
+        sugar: foodData.sugar || 0,
+        sodium: foodData.sodium || 0,
+        cholesterol: foodData.cholesterol || 0
+      });
+
+      return await this.foodRepository.save(foodToSave);
+    } catch (error) {
+      console.error('Error in createFood:', error);
+      throw new HttpException(
+        'Failed to create food item',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 }

@@ -156,46 +156,49 @@ export class NutritionController {
   }
 
   @Post('meal-plans/:id/smart-meal')
-  @ApiOperation({ summary: 'Add a meal to a plan with automatic percentage adjustment' })
+  @ApiOperation({
+    summary: 'Add a meal to a plan with automatic percentage adjustment',
+  })
   @ApiParam({ name: 'id', type: String, description: 'Meal plan ID' })
-  @ApiBody({ 
+  @ApiBody({
     schema: {
       type: 'object',
       properties: {
         mealName: {
           type: 'string',
           description: 'Name of the meal',
-          example: 'Afternoon Snack'
+          example: 'Afternoon Snack',
         },
         targetTime: {
           type: 'string',
           description: 'Target time for meal (HH:MM)',
-          example: '15:30'
+          example: '15:30',
         },
         targetCalories: {
           type: 'number',
           description: 'Target calories for meal (optional)',
-          example: 250
+          example: 250,
         },
         percentage: {
           type: 'number',
           description: 'Percentage of daily calories for this meal (optional)',
-          example: 15
-        }
+          example: 15,
+        },
       },
-      required: ['mealName']
-    }
+      required: ['mealName'],
+    },
   })
-  @ApiCreatedResponse({ 
+  @ApiCreatedResponse({
     description: 'Meal added successfully with auto-adjusted distribution',
-    type: Meal 
+    type: Meal,
   })
   @ApiNotFoundResponse({ description: 'Meal plan not found' })
   @ApiBadRequestResponse({ description: 'Invalid input data' })
   async addSmartMealToMealPlan(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() addMealDto: { 
-      mealName: string; 
+    @Body()
+    addMealDto: {
+      mealName: string;
       targetTime?: string;
       targetCalories?: number;
       percentage?: number;
@@ -208,7 +211,7 @@ export class NutritionController {
       addMealDto.targetTime,
       addMealDto.targetCalories,
       addMealDto.percentage,
-      req.user
+      req.user,
     );
   }
 

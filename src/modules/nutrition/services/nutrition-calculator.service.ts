@@ -119,12 +119,13 @@ export class NutritionCalculatorService {
     // Process each meal
     for (const meal of meals) {
       const mealNutrition = this.calculateMealNutrition(meal);
-      
+
       // Only count nutrients from eaten meals
       if (meal.eaten) {
         totalNutrients.calories += mealNutrition.totalNutrients.calories;
         totalNutrients.protein += mealNutrition.totalNutrients.protein;
-        totalNutrients.carbohydrates += mealNutrition.totalNutrients.carbohydrates;
+        totalNutrients.carbohydrates +=
+          mealNutrition.totalNutrients.carbohydrates;
         totalNutrients.fat += mealNutrition.totalNutrients.fat;
         totalNutrients.fiber += mealNutrition.totalNutrients.fiber;
         totalNutrients.sugar += mealNutrition.totalNutrients.sugar;
