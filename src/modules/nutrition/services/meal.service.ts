@@ -11,6 +11,7 @@ import { FoodService } from '../../food/food.service';
 import { MealPlanService } from './meal-plan.service';
 import { NutritionCalculatorService } from './nutrition-calculator.service';
 import { Food } from '../../food/entities/food.entity';
+import { UpdateMealDto } from '../dto/update-meal.dto';
 
 @Injectable()
 export class MealService {
@@ -27,9 +28,16 @@ export class MealService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async addMealToMealPlan(mealPlanId: string, dto: AddMealDto, user: User): Promise<Meal> {
-    return await this.dataSource.transaction(async manager => {
-      const mealPlan = await this.mealPlanService.getMealPlanById(mealPlanId, user);
+  async addMealToMealPlan(
+    mealPlanId: string,
+    dto: AddMealDto,
+    user: User,
+  ): Promise<Meal> {
+    return await this.dataSource.transaction(async (manager) => {
+      const mealPlan = await this.mealPlanService.getMealPlanById(
+        mealPlanId,
+        user,
+      );
 
       const meal = manager.create(Meal, {
         ...dto,
@@ -45,31 +53,34 @@ export class MealService {
     type: 'meal' | 'food',
     id: string,
     eaten: boolean,
-    user: User
+    user: User,
   ): Promise<boolean> {
     try {
       const now = eaten ? new Date() : null;
 
       if (type === 'meal') {
         const meal = await this.getMealById(id, user);
-        
-        await manager.createQueryBuilder()
+
+        await manager
+          .createQueryBuilder()
           .update(MealFood)
           .set({ eaten, eatenAt: now })
           .where('mealId = :mealId', { mealId: id })
           .execute();
 
-        await manager.createQueryBuilder()
+        await manager
+          .createQueryBuilder()
           .update(Meal)
           .set({ eaten, eatenAt: now })
           .where('id = :id', { id })
           .execute();
-
-      } else { // food
+      } else {
+        // food
         const mealFood = await this.getMealFoodById(id, user);
-        
+
         // Update food status
-        await manager.createQueryBuilder()
+        await manager
+          .createQueryBuilder()
           .update(MealFood)
           .set({ eaten, eatenAt: now })
           .where('id = :id', { id })
@@ -77,15 +88,15 @@ export class MealService {
 
         // Check if all foods in meal are eaten
         const allMealFoods = await this.mealFoodRepository.find({
-          where: { meal: { id: mealFood.meal.id } }
+          where: { meal: { id: mealFood.meal.id } },
         });
 
-        const allEaten = allMealFoods.every(mf => mf.eaten);
-        
+        const allEaten = allMealFoods.every((mf) => mf.eaten);
+
         if (allEaten !== mealFood.meal.eaten) {
           await manager.update(Meal, mealFood.meal.id, {
             eaten: allEaten,
-            eatenAt: allEaten ? new Date() : null
+            eatenAt: allEaten ? new Date() : null,
           });
         }
       }
@@ -97,61 +108,79 @@ export class MealService {
     }
   }
 
-  async markMealAsEaten(mealId: string, eaten: boolean, user: User): Promise<boolean> {
-    return await this.dataSource.transaction(manager => 
-      this.updateEatenStatus(manager, 'meal', mealId, eaten, user)
+  async markMealAsEaten(
+    mealId: string,
+    eaten: boolean,
+    user: User,
+  ): Promise<boolean> {
+    return await this.dataSource.transaction((manager) =>
+      this.updateEatenStatus(manager, 'meal', mealId, eaten, user),
     );
   }
 
-  async markFoodAsEaten(foodId: string, eaten: boolean, user: User): Promise<boolean> {
-    return await this.dataSource.transaction(manager => 
-      this.updateEatenStatus(manager, 'food', foodId, eaten, user)
+  async markFoodAsEaten(
+    foodId: string,
+    eaten: boolean,
+    user: User,
+  ): Promise<boolean> {
+    return await this.dataSource.transaction((manager) =>
+      this.updateEatenStatus(manager, 'food', foodId, eaten, user),
     );
   }
 
-  async toggleFoodEaten(mealId: string, foodId: string, user: User): Promise<boolean> {
+  async toggleFoodEaten(
+    mealId: string,
+    foodId: string,
+    user: User,
+  ): Promise<boolean> {
     try {
-      return await this.dataSource.transaction(async manager => {
+      return await this.dataSource.transaction(async (manager) => {
         // Get current status
         const mealFood = await this.getMealFoodByIds(mealId, foodId, user);
-        
+
         if (!mealFood) {
-          throw new HttpException('Food not found in this meal', HttpStatus.NOT_FOUND);
+          throw new HttpException(
+            'Food not found in this meal',
+            HttpStatus.NOT_FOUND,
+          );
         }
 
         // Toggle the status
         mealFood.eaten = !mealFood.eaten;
         mealFood.eatenAt = mealFood.eaten ? new Date() : null;
-        
+
         await manager.save(mealFood);
 
         const allMealFoods = await this.mealFoodRepository.find({
-          where: { meal: { id: mealId } }
+          where: { meal: { id: mealId } },
         });
 
-        const allEaten = allMealFoods.every(mf => mf.eaten);
-        
+        const allEaten = allMealFoods.every((mf) => mf.eaten);
+
         if (allEaten !== mealFood.meal.eaten) {
           await manager.update(Meal, mealId, {
             eaten: allEaten,
-            eatenAt: allEaten ? new Date() : null
+            eatenAt: allEaten ? new Date() : null,
           });
         }
-        
+
         return mealFood.eaten;
       });
     } catch (error) {
       console.error('Error toggling food eaten status:', error);
-      throw new HttpException('Failed to toggle food status', HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Failed to toggle food status',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
   async toggleMealEaten(mealId: string, user: User): Promise<boolean> {
     try {
-      return await this.dataSource.transaction(async manager => {
+      return await this.dataSource.transaction(async (manager) => {
         // Get current status
         const meal = await this.getMealById(mealId, user);
-        
+
         if (!meal) {
           throw new HttpException('Meal not found', HttpStatus.NOT_FOUND);
         }
@@ -162,31 +191,35 @@ export class MealService {
 
         // Update all meal foods to match meal status
         if (meal.mealFoods) {
-          await manager.createQueryBuilder()
+          await manager
+            .createQueryBuilder()
             .update(MealFood)
-            .set({ 
+            .set({
               eaten: meal.eaten,
-              eatenAt: meal.eatenAt 
+              eatenAt: meal.eatenAt,
             })
             .where('mealId = :mealId', { mealId })
             .execute();
         }
 
         await manager.save(meal);
-        
+
         return meal.eaten;
       });
     } catch (error) {
       console.error('Error toggling meal eaten status:', error);
-      throw new HttpException('Failed to toggle meal status', HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Failed to toggle meal status',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
   async getMealById(mealId: string, user: User): Promise<Meal> {
     const meal = await this.mealRepository.findOne({
-      where: { 
+      where: {
         id: mealId,
-        mealPlan: { user: { id: user.id } } 
+        mealPlan: { user: { id: user.id } },
       },
       relations: ['mealFoods', 'mealFoods.food'],
     });
@@ -198,50 +231,77 @@ export class MealService {
     return meal;
   }
 
-  async addFoodToMeal(mealId: string, dto: AddFoodToMealDto, user: User): Promise<MealFood> {
-    return await this.dataSource.transaction(async manager => {
+  async addFoodToMeal(
+    mealId: string,
+    dto: AddFoodToMealDto,
+    user: User,
+  ): Promise<MealFood> {
+    return await this.dataSource.transaction(async (manager) => {
       const meal = await this.getMealById(mealId, user);
-      
+
       let food;
       if (dto.foodId) {
         food = await this.foodRepository.findOne({ where: { id: dto.foodId } });
         if (!food) {
-          throw new HttpException(`Food with ID ${dto.foodId} not found`, HttpStatus.NOT_FOUND);
+          throw new HttpException(
+            `Food with ID ${dto.foodId} not found`,
+            HttpStatus.NOT_FOUND,
+          );
         }
       } else if (dto.usdaFoodId) {
-        food = await this.foodRepository.findOne({ where: { usdaId: dto.usdaFoodId } });
+        food = await this.foodRepository.findOne({
+          where: { usdaId: dto.usdaFoodId },
+        });
         if (!food) {
           // If not found locally, fetch from USDA API
-          const foodData = await this.foodService.getFoodDetails(dto.usdaFoodId);
+          const foodData = await this.foodService.getFoodDetails(
+            dto.usdaFoodId,
+          );
           food = manager.create(Food, foodData);
           food.user = { id: user.id };
           food = await manager.save(food);
         }
       } else if (dto.query) {
-        const searchResults = await this.foodService.searchFoods(dto.query, 1, 1);
+        const searchResults = await this.foodService.searchFoods(
+          dto.query,
+          1,
+          1,
+        );
         if (searchResults.foods && searchResults.foods.length > 0) {
           const foodDetails = searchResults.foods[0];
-          
+
           // Create new food entry with nutritional values
           food = manager.create(Food, {
             ...foodDetails,
-            user: { id: user.id }
+            user: { id: user.id },
           });
-          
+
           food = await manager.save(food);
-          
-          console.log('Created food with details:', JSON.stringify(food, null, 2));
+
+          console.log(
+            'Created food with details:',
+            JSON.stringify(food, null, 2),
+          );
         } else {
-          throw new HttpException(`No food found matching query: ${dto.query}`, HttpStatus.NOT_FOUND);
+          throw new HttpException(
+            `No food found matching query: ${dto.query}`,
+            HttpStatus.NOT_FOUND,
+          );
         }
       } else {
-        throw new HttpException('You must provide either foodId, usdaFoodId, or query', HttpStatus.BAD_REQUEST);
+        throw new HttpException(
+          'You must provide either foodId, usdaFoodId, or query',
+          HttpStatus.BAD_REQUEST,
+        );
       }
 
       // Calculate nutrients based on serving size
       const servingSize = dto.servingSize || 100;
-      const nutrients = this.nutritionCalculator.calculateNutrients(food, servingSize);
-      
+      const nutrients = this.nutritionCalculator.calculateNutrients(
+        food,
+        servingSize,
+      );
+
       // Create and save the meal food with calculated nutrients
       const mealFood = manager.create(MealFood, {
         meal: { id: meal.id },
@@ -256,26 +316,32 @@ export class MealService {
           fiber: nutrients.fiber || 0,
           sugar: nutrients.sugar || 0,
           sodium: nutrients.sodium || 0,
-          cholesterol: nutrients.cholesterol || 0
+          cholesterol: nutrients.cholesterol || 0,
         },
-        eaten: false
+        eaten: false,
       });
-      
+
       const savedMealFood = await manager.save(mealFood);
-      
-      
+
       //console.log('Saved MealFood:', JSON.stringify(savedMealFood, null, 2));
-      
+
       return savedMealFood;
     });
   }
 
-  async updateMealFood(id: string, dto: UpdateMealFoodDto, user: User): Promise<MealFood> {
-    return await this.dataSource.transaction(async manager => {
+  async updateMealFood(
+    id: string,
+    dto: UpdateMealFoodDto,
+    user: User,
+  ): Promise<MealFood> {
+    return await this.dataSource.transaction(async (manager) => {
       const mealFood = await this.getMealFoodById(id, user);
-      
+
       if (dto.servingSize) {
-        const nutrients = this.nutritionCalculator.calculateNutrients(mealFood.food, dto.servingSize);
+        const nutrients = this.nutritionCalculator.calculateNutrients(
+          mealFood.food,
+          dto.servingSize,
+        );
         Object.assign(mealFood, { nutrients });
       }
 
@@ -284,20 +350,27 @@ export class MealService {
     });
   }
 
-  async removeFoodFromMeal(mealId: string, foodId: string, user: User): Promise<void> {
+  async removeFoodFromMeal(
+    mealId: string,
+    foodId: string,
+    user: User,
+  ): Promise<void> {
     const mealFood = await this.mealFoodRepository.findOne({
-      where: { 
-        meal: { 
+      where: {
+        meal: {
           id: mealId,
-          mealPlan: { user: { id: user.id } }
+          mealPlan: { user: { id: user.id } },
         },
-        food: { id: foodId }
+        food: { id: foodId },
       },
-      relations: ['meal', 'food', 'meal.mealPlan']
+      relations: ['meal', 'food', 'meal.mealPlan'],
     });
 
     if (!mealFood) {
-      throw new HttpException('Food not found in this meal', HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        'Food not found in this meal',
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     await this.mealFoodRepository.remove(mealFood);
@@ -305,11 +378,11 @@ export class MealService {
 
   async getMealFoodById(id: string, user: User): Promise<MealFood> {
     const mealFood = await this.mealFoodRepository.findOne({
-      where: { 
+      where: {
         id,
-        meal: { mealPlan: { user: { id: user.id } } }
+        meal: { mealPlan: { user: { id: user.id } } },
       },
-      relations: ['meal', 'food', 'meal.mealPlan']
+      relations: ['meal', 'food', 'meal.mealPlan'],
     });
 
     if (!mealFood) {
@@ -320,10 +393,9 @@ export class MealService {
   }
 
   async getMealsByDate(date: Date, user: User): Promise<Meal[]> {
-
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
-    
+
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
@@ -336,7 +408,10 @@ export class MealService {
       .leftJoinAndSelect('mealFoods.food', 'food')
       .where('mealPlan.user = :userId', { userId: user.id })
       .andWhere('mealPlan.startDate <= :endOfDay', { endOfDay })
-      .andWhere('(mealPlan.endDate IS NULL OR mealPlan.endDate >= :startOfDay)', { startOfDay })
+      .andWhere(
+        '(mealPlan.endDate IS NULL OR mealPlan.endDate >= :startOfDay)',
+        { startOfDay },
+      )
       .orderBy('meal.targetTime', 'ASC')
       .getMany();
 
@@ -344,22 +419,86 @@ export class MealService {
     return meals;
   }
 
-  async getMealFoodByIds(mealId: string, foodId: string, user: User): Promise<MealFood> {
+  async getMealFoodByIds(
+    mealId: string,
+    foodId: string,
+    user: User,
+  ): Promise<MealFood> {
     const mealFood = await this.mealFoodRepository.findOne({
-      where: { 
-        meal: { 
+      where: {
+        meal: {
           id: mealId,
-          mealPlan: { user: { id: user.id } }
+          mealPlan: { user: { id: user.id } },
         },
-        food: { id: foodId }
+        food: { id: foodId },
       },
-      relations: ['meal', 'food', 'meal.mealPlan']
+      relations: ['meal', 'food', 'meal.mealPlan'],
     });
 
     if (!mealFood) {
-      throw new HttpException('Food not found in this meal', HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        'Food not found in this meal',
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     return mealFood;
+  }
+
+  async updateMeal(
+    id: string,
+    updateMealDto: UpdateMealDto,
+    user: User,
+  ): Promise<Meal> {
+    const meal = await this.getMealById(id, user);
+
+    if (!meal) {
+      throw new HttpException('Meal not found', HttpStatus.NOT_FOUND);
+    }
+
+    try {
+      // Handle time string conversion for targetTime
+      if (updateMealDto.targetTime) {
+        const [hours, minutes] = updateMealDto.targetTime
+          .split(':')
+          .map(Number);
+        const timeDate = new Date();
+        timeDate.setHours(hours, minutes, 0, 0);
+        updateMealDto.targetTime = timeDate as any;
+      }
+
+      // Update the meal with the provided fields
+      const updatedMeal = await this.mealRepository.save({
+        ...meal,
+        ...updateMealDto,
+        id: meal.id, // Ensure we keep the same ID
+      });
+
+      return this.getMealById(updatedMeal.id, user);
+    } catch (error) {
+      console.error('Error updating meal:', error);
+      throw new HttpException(
+        'Failed to update meal',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async deleteMeal(id: string, user: User): Promise<void> {
+    const meal = await this.getMealById(id, user);
+
+    if (!meal) {
+      throw new HttpException('Meal not found', HttpStatus.NOT_FOUND);
+    }
+
+    try {
+      await this.mealRepository.remove(meal);
+    } catch (error) {
+      console.error('Error deleting meal:', error);
+      throw new HttpException(
+        'Failed to delete meal',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }
