@@ -24,6 +24,9 @@ export class MealPlan extends BaseEntity {
   @Column({ type: 'json', nullable: true })
   calorieDistribution: MealCalorieDistribution[];
 
+  @Column({ default: true })
+  createMealsAutomatically: boolean;
+
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   user: User;
 

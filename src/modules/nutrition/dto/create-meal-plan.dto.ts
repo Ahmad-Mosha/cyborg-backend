@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsDate, IsInt, Min, ValidateNested, IsArray, IsNumber } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsDate, IsInt, Min, ValidateNested, IsArray, IsNumber, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -97,4 +97,14 @@ export class CreateMealPlanDto {
   @IsArray()
   @IsOptional()
   calorieDistribution?: MealCalorieDistributionDto[];
+
+  @ApiProperty({
+    description: 'Whether to create meals automatically',
+    required: false,
+    default: true,
+    example: true
+  })
+  @IsBoolean()
+  @IsOptional()
+  createMealsAutomatically?: boolean;
 }

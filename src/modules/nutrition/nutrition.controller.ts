@@ -155,6 +155,63 @@ export class NutritionController {
     return this.mealService.addMealToMealPlan(id, addMealDto, req.user);
   }
 
+  @Post('meal-plans/:id/smart-meal')
+  @ApiOperation({ summary: 'Add a meal to a plan with automatic percentage adjustment' })
+  @ApiParam({ name: 'id', type: String, description: 'Meal plan ID' })
+  @ApiBody({ 
+    schema: {
+      type: 'object',
+      properties: {
+        mealName: {
+          type: 'string',
+          description: 'Name of the meal',
+          example: 'Afternoon Snack'
+        },
+        targetTime: {
+          type: 'string',
+          description: 'Target time for meal (HH:MM)',
+          example: '15:30'
+        },
+        targetCalories: {
+          type: 'number',
+          description: 'Target calories for meal (optional)',
+          example: 250
+        },
+        percentage: {
+          type: 'number',
+          description: 'Percentage of daily calories for this meal (optional)',
+          example: 15
+        }
+      },
+      required: ['mealName']
+    }
+  })
+  @ApiCreatedResponse({ 
+    description: 'Meal added successfully with auto-adjusted distribution',
+    type: Meal 
+  })
+  @ApiNotFoundResponse({ description: 'Meal plan not found' })
+  @ApiBadRequestResponse({ description: 'Invalid input data' })
+  async addSmartMealToMealPlan(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() addMealDto: { 
+      mealName: string; 
+      targetTime?: string;
+      targetCalories?: number;
+      percentage?: number;
+    },
+    @Request() req,
+  ): Promise<Meal> {
+    return this.mealPlanService.addMealToPlan(
+      id,
+      addMealDto.mealName,
+      addMealDto.targetTime,
+      addMealDto.targetCalories,
+      addMealDto.percentage,
+      req.user
+    );
+  }
+
   @Get('meals/:id')
   @ApiOperation({ summary: 'Get meal by ID' })
   @ApiParam({ name: 'id', type: String })
