@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 
 @Entity('foods')
@@ -15,51 +22,51 @@ export class Food {
   @Column({ type: 'float', nullable: true })
   calories: number;
 
-  @Column({ type: 'float', nullable: true})
+  @Column({ type: 'float', nullable: true })
   fat: number;
 
-  @Column({ type: 'float', nullable: true }) 
+  @Column({ type: 'float', nullable: true })
   cholesterol: number;
 
-  @Column({ type: 'float', nullable: true }) 
+  @Column({ type: 'float', nullable: true })
   sodium: number;
 
-  @Column({ type: 'float', nullable: true }) 
+  @Column({ type: 'float', nullable: true })
   potassium: number;
 
-  @Column({ type: 'float', nullable: true }) 
+  @Column({ type: 'float', nullable: true })
   carbohydrates: number;
 
-  @Column({ type: 'float', nullable: true }) 
+  @Column({ type: 'float', nullable: true })
   fiber: number;
 
-  @Column({ type: 'float', nullable: true }) 
+  @Column({ type: 'float', nullable: true })
   sugar: number;
 
-  @Column({ type: 'float', nullable: true }) 
+  @Column({ type: 'float', nullable: true })
   protein: number;
 
-  @Column({ type: 'float', nullable: true }) 
+  @Column({ type: 'float', nullable: true })
   vitamin_a: number;
 
-  @Column({ type: 'float', nullable: true }) 
+  @Column({ type: 'float', nullable: true })
   vitamin_c: number;
 
-  @Column({ type: 'float', nullable: true }) 
+  @Column({ type: 'float', nullable: true })
   calcium: number;
 
-  @Column({ type: 'float', nullable: true }) 
+  @Column({ type: 'float', nullable: true })
   iron: number;
 
-  @Column({ type: 'float', nullable: true, default: 100 }) 
+  @Column({ type: 'float', nullable: true, default: 100 })
   servingSize: number;
 
-  @Column({ nullable: true, default: 'g' }) 
+  @Column({ nullable: true, default: 'g' })
   servingUnit: string;
 
   @Column({ type: 'text', nullable: true })
   usdaId: string;
-  
+
   @Column({ type: 'boolean', default: false })
   isCustom: boolean;
 

@@ -379,14 +379,20 @@ export class FoodService {
     }
   }
 
-  async getUserFoods(user: User, page: number = 1, pageSize: number = 10, isCustomOnly: boolean = false) {
+  async getUserFoods(
+    user: User,
+    page: number = 1,
+    pageSize: number = 10,
+    isCustomOnly: boolean = false,
+  ) {
     const skip = (Number(page) - 1) * Number(pageSize);
     const take = Number(pageSize);
 
     try {
-      const query = this.foodRepository.createQueryBuilder('food')
+      const query = this.foodRepository
+        .createQueryBuilder('food')
         .where('food.user.id = :userId', { userId: user.id });
-      
+
       if (isCustomOnly) {
         query.andWhere('food.isCustom = :isCustom', { isCustom: true });
       }

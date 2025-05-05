@@ -253,9 +253,9 @@ export class MealService {
   ): Promise<MealFood> {
     return await this.dataSource.transaction(async (manager) => {
       const meal = await this.getMealById(mealId, user);
-      
+
       let food;
-      
+
       // Case 1: Using an existing food by ID
       if (dto.foodId) {
         food = await this.foodRepository.findOne({ where: { id: dto.foodId } });
@@ -271,10 +271,12 @@ export class MealService {
         food = await this.foodRepository.findOne({
           where: { usdaId: dto.usdaFoodId },
         });
-        
+
         if (!food) {
           // If not found locally, fetch from USDA API
-          const foodData = await this.foodService.getFoodDetails(dto.usdaFoodId);
+          const foodData = await this.foodService.getFoodDetails(
+            dto.usdaFoodId,
+          );
           food = manager.create(Food, {
             ...foodData,
             user: { id: user.id },
@@ -293,9 +295,9 @@ export class MealService {
           fat: dto.customFood.fat || 0,
           servingSize: dto.servingSize || 100,
           servingUnit: dto.servingUnit || 'g',
-          isCustom: true
+          isCustom: true,
         });
-        
+
         // If user wants to save this custom food to their collection
         if (dto.saveToCollection) {
           food.user = { id: user.id };
@@ -517,7 +519,7 @@ export class MealService {
   }
 
   async deleteMeal(id: string, user: User): Promise<void> {
-    return await this.dataSource.transaction(async manager => {
+    return await this.dataSource.transaction(async (manager) => {
       const meal = await this.getMealById(id, user);
 
       if (!meal) {
@@ -528,11 +530,11 @@ export class MealService {
       if (meal.mealFoods && meal.mealFoods.length > 0) {
         await manager.remove(meal.mealFoods);
       }
-      
+
       try {
         // Remove the meal
         await manager.remove(meal);
-        
+
         // Ensure meals are removed from cache
         if (meal.mealPlan) {
           await manager.query('PRAGMA foreign_keys = ON;');
@@ -541,7 +543,7 @@ export class MealService {
         console.error('Error deleting meal:', error);
         throw new HttpException(
           'Failed to delete meal',
-          HttpStatus.INTERNAL_SERVER_ERROR
+          HttpStatus.INTERNAL_SERVER_ERROR,
         );
       }
     });

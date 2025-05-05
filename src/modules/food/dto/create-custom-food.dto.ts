@@ -4,7 +4,7 @@ import { ApiProperty } from '@nestjs/swagger';
 export class CreateCustomFoodDto {
   @ApiProperty({
     description: 'Name of the food',
-    example: 'Homemade Granola'
+    example: 'Homemade Granola',
   })
   @IsString()
   name: string;
@@ -12,7 +12,7 @@ export class CreateCustomFoodDto {
   @ApiProperty({
     description: 'Description of the food',
     example: 'My homemade granola with honey and nuts',
-    required: false
+    required: false,
   })
   @IsString()
   @IsOptional()
@@ -21,7 +21,7 @@ export class CreateCustomFoodDto {
   @ApiProperty({
     description: 'Calories per serving',
     example: 250,
-    required: true
+    required: true,
   })
   @IsNumber()
   @Min(0)
@@ -30,7 +30,7 @@ export class CreateCustomFoodDto {
   @ApiProperty({
     description: 'Protein content in grams',
     example: 7,
-    required: false
+    required: false,
   })
   @IsNumber()
   @IsOptional()
@@ -40,7 +40,7 @@ export class CreateCustomFoodDto {
   @ApiProperty({
     description: 'Carbohydrates content in grams',
     example: 35,
-    required: false
+    required: false,
   })
   @IsNumber()
   @IsOptional()
@@ -50,7 +50,7 @@ export class CreateCustomFoodDto {
   @ApiProperty({
     description: 'Fat content in grams',
     example: 10,
-    required: false
+    required: false,
   })
   @IsNumber()
   @IsOptional()
@@ -61,7 +61,7 @@ export class CreateCustomFoodDto {
     description: 'Serving size',
     example: 45,
     default: 100,
-    required: false
+    required: false,
   })
   @IsNumber()
   @IsOptional()
@@ -72,7 +72,7 @@ export class CreateCustomFoodDto {
     description: 'Serving unit',
     example: 'g',
     default: 'g',
-    required: false
+    required: false,
   })
   @IsString()
   @IsOptional()

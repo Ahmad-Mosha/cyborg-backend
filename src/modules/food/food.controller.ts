@@ -135,8 +135,14 @@ export class FoodController {
 
   @Post('custom')
   @ApiOperation({ summary: 'Create a custom food' })
-  @ApiResponse({ status: HttpStatus.CREATED, description: 'Custom food created successfully' })
-  async createCustomFood(@Body() createCustomFoodDto: CreateCustomFoodDto, @Request() req) {
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'Custom food created successfully',
+  })
+  async createCustomFood(
+    @Body() createCustomFoodDto: CreateCustomFoodDto,
+    @Request() req,
+  ) {
     return this.foodService.createCustomFood(createCustomFoodDto, req.user);
   }
 
