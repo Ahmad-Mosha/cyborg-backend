@@ -39,8 +39,23 @@ export class MealService {
         user,
       );
 
+      // Handle time string conversion for targetTime
+      let timeDate;
+      if (dto.targetTime) {
+        const [hours, minutes] = dto.targetTime.split(':').map(Number);
+        timeDate = new Date();
+        timeDate.setHours(hours, minutes, 0, 0);
+      } else {
+        // Default time if not provided
+        timeDate = new Date();
+        timeDate.setHours(12, 0, 0, 0); // Default to noon
+      }
+
       const meal = manager.create(Meal, {
-        ...dto,
+        name: dto.name,
+        targetTime: timeDate,
+        targetCalories: dto.targetCalories,
+        nutritionGoals: dto.nutritionGoals,
         mealPlan: { id: mealPlan.id },
       });
 
@@ -485,20 +500,33 @@ export class MealService {
   }
 
   async deleteMeal(id: string, user: User): Promise<void> {
-    const meal = await this.getMealById(id, user);
+    return await this.dataSource.transaction(async manager => {
+      const meal = await this.getMealById(id, user);
 
-    if (!meal) {
-      throw new HttpException('Meal not found', HttpStatus.NOT_FOUND);
-    }
+      if (!meal) {
+        throw new HttpException('Meal not found', HttpStatus.NOT_FOUND);
+      }
 
-    try {
-      await this.mealRepository.remove(meal);
-    } catch (error) {
-      console.error('Error deleting meal:', error);
-      throw new HttpException(
-        'Failed to delete meal',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+      // First remove any associated meal foods
+      if (meal.mealFoods && meal.mealFoods.length > 0) {
+        await manager.remove(meal.mealFoods);
+      }
+      
+      try {
+        // Remove the meal
+        await manager.remove(meal);
+        
+        // Ensure meals are removed from cache
+        if (meal.mealPlan) {
+          await manager.query('PRAGMA foreign_keys = ON;');
+        }
+      } catch (error) {
+        console.error('Error deleting meal:', error);
+        throw new HttpException(
+          'Failed to delete meal',
+          HttpStatus.INTERNAL_SERVER_ERROR
+        );
+      }
+    });
   }
 }

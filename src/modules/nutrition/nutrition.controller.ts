@@ -60,12 +60,22 @@ export class NutritionController {
   ) {}
 
   @Post('meal-plans')
-  @UsePipes(new ValidationPipe({ transform: true }))
+  @UsePipes(new ValidationPipe({ 
+    transform: true, 
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    forbidUnknownValues: true
+  }))
   @ApiOperation({ summary: 'Create a new meal plan' })
   async createMealPlan(
     @Body() dto: CreateMealPlanDto,
     @Request() req,
   ): Promise<MealPlan> {
+    // Filter out empty calorieDistribution objects before passing to service
+    if (dto.calorieDistribution?.length) {
+      dto.calorieDistribution = dto.calorieDistribution.filter(meal => 
+        meal && meal.mealName && typeof meal.percentage === 'number');
+    }
     return this.mealPlanService.createMealPlan(dto, req.user);
   }
 

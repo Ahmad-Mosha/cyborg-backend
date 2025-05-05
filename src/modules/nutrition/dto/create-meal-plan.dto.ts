@@ -4,12 +4,29 @@ import { ApiProperty } from '@nestjs/swagger';
 
 // Create a class for validation instead of using interface
 export class MealCalorieDistributionDto {
+  @ApiProperty({
+    description: 'Name of the meal',
+    example: 'Breakfast'
+  })
   @IsString()
+  @IsNotEmpty()
   mealName: string;
 
+  @ApiProperty({
+    description: 'Percentage of daily calories',
+    example: 25,
+    minimum: 0,
+    maximum: 100
+  })
   @IsNumber()
+  @Min(0)
   percentage: number;
 
+  @ApiProperty({
+    description: 'Calculated calorie amount',
+    example: 500,
+    required: false
+  })
   @IsNumber()
   @IsOptional()
   calorieAmount?: number;
@@ -41,7 +58,7 @@ export class CreateMealPlanDto {
   })
   @IsNumber()
   @IsOptional()
-  targetCalories?: number = 2000;
+  targetCalories?: number;
 
   @ApiProperty({
     description: 'Start date of the plan',
@@ -52,7 +69,7 @@ export class CreateMealPlanDto {
   @IsDate()
   @Type(() => Date)
   @IsOptional()
-  startDate?: Date = new Date();
+  startDate?: Date;
 
   @ApiProperty({
     description: 'End date of the plan',
@@ -68,14 +85,16 @@ export class CreateMealPlanDto {
   @ApiProperty({
     description: 'Custom calorie distribution for meals',
     required: false,
-    type: [MealCalorieDistributionDto]
+    type: [MealCalorieDistributionDto],
+    example: [
+      { mealName: 'Breakfast', percentage: 25 },
+      { mealName: 'Lunch', percentage: 40 },
+      { mealName: 'Dinner', percentage: 35 }
+    ]
   })
   @ValidateNested({ each: true })
   @Type(() => MealCalorieDistributionDto)
+  @IsArray()
   @IsOptional()
-  calorieDistribution?: MealCalorieDistributionDto[] = [
-    { mealName: 'Breakfast', percentage: 25 },
-    { mealName: 'Lunch', percentage: 40 },
-    { mealName: 'Dinner', percentage: 35 }
-  ];
+  calorieDistribution?: MealCalorieDistributionDto[];
 }
