@@ -15,51 +15,53 @@ export class Food {
   @Column({ type: 'float', nullable: true })
   calories: number;
 
-  @Column({ type: 'float' , nullable: true})
+  @Column({ type: 'float', nullable: true})
   fat: number;
 
   @Column({ type: 'float', nullable: true }) 
-cholesterol: number;
+  cholesterol: number;
 
-@Column({ type: 'float', nullable: true }) 
-sodium: number;
+  @Column({ type: 'float', nullable: true }) 
+  sodium: number;
 
-@Column({ type: 'float', nullable: true }) 
-potassium: number;
+  @Column({ type: 'float', nullable: true }) 
+  potassium: number;
 
-@Column({ type: 'float', nullable: true }) 
-carbohydrates: number;
+  @Column({ type: 'float', nullable: true }) 
+  carbohydrates: number;
 
-@Column({ type: 'float', nullable: true }) 
-fiber: number;
+  @Column({ type: 'float', nullable: true }) 
+  fiber: number;
 
-@Column({ type: 'float', nullable: true }) 
-sugar: number;
+  @Column({ type: 'float', nullable: true }) 
+  sugar: number;
 
-@Column({ type: 'float', nullable: true }) 
-protein: number;
+  @Column({ type: 'float', nullable: true }) 
+  protein: number;
 
-@Column({ type: 'float', nullable: true }) 
-vitamin_a: number;
+  @Column({ type: 'float', nullable: true }) 
+  vitamin_a: number;
 
-@Column({ type: 'float', nullable: true }) 
-vitamin_c: number;
+  @Column({ type: 'float', nullable: true }) 
+  vitamin_c: number;
 
-@Column({ type: 'float', nullable: true }) 
-calcium: number;
+  @Column({ type: 'float', nullable: true }) 
+  calcium: number;
 
-@Column({ type: 'float', nullable: true }) 
-iron: number;
+  @Column({ type: 'float', nullable: true }) 
+  iron: number;
 
-@Column({ type: 'float', nullable: true }) 
-servingSize: number;
+  @Column({ type: 'float', nullable: true, default: 100 }) 
+  servingSize: number;
 
-@Column({ nullable: true }) 
-servingUnit: string;
-
+  @Column({ nullable: true, default: 'g' }) 
+  servingUnit: string;
 
   @Column({ type: 'text', nullable: true })
   usdaId: string;
+  
+  @Column({ type: 'boolean', default: false })
+  isCustom: boolean;
 
   @ManyToOne(() => User)
   user: User;

@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { Food } from './entities/food.entity';
 import { User } from '../users/entities/user.entity';
+import { CreateCustomFoodDto } from './dto/create-custom-food.dto';
 
 interface NutrientValues {
   calories?: number;
@@ -356,5 +357,61 @@ export class FoodService {
     }
 
     return food;
+  }
+
+  async createCustomFood(dto: CreateCustomFoodDto, user: User): Promise<Food> {
+    try {
+      const customFood = this.foodRepository.create({
+        ...dto,
+        isCustom: true,
+        user: { id: user.id },
+        servingSize: dto.servingSize || 100,
+        servingUnit: dto.servingUnit || 'g',
+      });
+
+      return await this.foodRepository.save(customFood);
+    } catch (error) {
+      console.error('Error in createCustomFood:', error);
+      throw new HttpException(
+        'Failed to create custom food',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getUserFoods(user: User, page: number = 1, pageSize: number = 10, isCustomOnly: boolean = false) {
+    const skip = (Number(page) - 1) * Number(pageSize);
+    const take = Number(pageSize);
+
+    try {
+      const query = this.foodRepository.createQueryBuilder('food')
+        .where('food.user.id = :userId', { userId: user.id });
+      
+      if (isCustomOnly) {
+        query.andWhere('food.isCustom = :isCustom', { isCustom: true });
+      }
+
+      const [foods, total] = await query
+        .skip(skip)
+        .take(take)
+        .orderBy('food.createdAt', 'DESC')
+        .getManyAndCount();
+
+      return {
+        data: foods,
+        meta: {
+          total,
+          page: Number(page),
+          pageSize: Number(pageSize),
+          totalPages: Math.ceil(total / take),
+        },
+      };
+    } catch (error) {
+      console.error('Error in getUserFoods:', error);
+      throw new HttpException(
+        'Failed to fetch user foods',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }

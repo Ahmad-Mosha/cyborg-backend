@@ -253,8 +253,10 @@ export class MealService {
   ): Promise<MealFood> {
     return await this.dataSource.transaction(async (manager) => {
       const meal = await this.getMealById(mealId, user);
-
+      
       let food;
+      
+      // Case 1: Using an existing food by ID
       if (dto.foodId) {
         food = await this.foodRepository.findOne({ where: { id: dto.foodId } });
         if (!food) {
@@ -263,20 +265,45 @@ export class MealService {
             HttpStatus.NOT_FOUND,
           );
         }
-      } else if (dto.usdaFoodId) {
+      }
+      // Case 2: Using a USDA food by ID
+      else if (dto.usdaFoodId) {
         food = await this.foodRepository.findOne({
           where: { usdaId: dto.usdaFoodId },
         });
+        
         if (!food) {
           // If not found locally, fetch from USDA API
-          const foodData = await this.foodService.getFoodDetails(
-            dto.usdaFoodId,
-          );
-          food = manager.create(Food, foodData);
+          const foodData = await this.foodService.getFoodDetails(dto.usdaFoodId);
+          food = manager.create(Food, {
+            ...foodData,
+            user: { id: user.id },
+          });
+          food = await manager.save(food);
+        }
+      }
+      // Case 3: Creating a one-time custom food
+      else if (dto.customFood) {
+        // Create a temporary food entity (not saved to database unless specified)
+        food = manager.create(Food, {
+          name: dto.customFood.name,
+          calories: dto.customFood.calories,
+          protein: dto.customFood.protein || 0,
+          carbohydrates: dto.customFood.carbohydrates || 0,
+          fat: dto.customFood.fat || 0,
+          servingSize: dto.servingSize || 100,
+          servingUnit: dto.servingUnit || 'g',
+          isCustom: true
+        });
+        
+        // If user wants to save this custom food to their collection
+        if (dto.saveToCollection) {
           food.user = { id: user.id };
           food = await manager.save(food);
         }
-      } else if (dto.query) {
+      }
+      // Case 4: Searching for a food
+      else if (dto.query) {
         const searchResults = await this.foodService.searchFoods(
           dto.query,
           1,
@@ -285,18 +312,11 @@ export class MealService {
         if (searchResults.foods && searchResults.foods.length > 0) {
           const foodDetails = searchResults.foods[0];
 
-          // Create new food entry with nutritional values
           food = manager.create(Food, {
             ...foodDetails,
-            user: { id: user.id },
           });
 
-          food = await manager.save(food);
-
-          console.log(
-            'Created food with details:',
-            JSON.stringify(food, null, 2),
-          );
+          // Don't save to the foods table - this is just for the meal
         } else {
           throw new HttpException(
             `No food found matching query: ${dto.query}`,
@@ -305,7 +325,7 @@ export class MealService {
         }
       } else {
         throw new HttpException(
-          'You must provide either foodId, usdaFoodId, or query',
+          'You must provide either foodId, usdaFoodId, customFood details, or query',
           HttpStatus.BAD_REQUEST,
         );
       }
@@ -320,7 +340,7 @@ export class MealService {
       // Create and save the meal food with calculated nutrients
       const mealFood = manager.create(MealFood, {
         meal: { id: meal.id },
-        food: { id: food.id },
+        food: food.id ? { id: food.id } : food, // Use reference if food has ID, otherwise embed
         servingSize: servingSize,
         servingUnit: dto.servingUnit || 'g',
         nutrients: {
@@ -337,9 +357,6 @@ export class MealService {
       });
 
       const savedMealFood = await manager.save(mealFood);
-
-      //console.log('Saved MealFood:', JSON.stringify(savedMealFood, null, 2));
-
       return savedMealFood;
     });
   }
