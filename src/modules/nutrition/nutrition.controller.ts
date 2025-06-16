@@ -215,6 +215,45 @@ export class NutritionController {
     );
   }
 
+  @Get('meals/average-calories')
+  @ApiOperation({
+    summary: 'Get average calories of all meals',
+    description:
+      'Returns the average calories per meal and total number of meals for the current user',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Average calories calculated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        averageCalories: {
+          type: 'number',
+          description: 'Average calories per meal (rounded)',
+          example: 450,
+        },
+        totalMeals: {
+          type: 'number',
+          description: 'Total number of meals with calories > 0',
+          example: 25,
+        },
+      },
+    },
+  })
+  async getAverageCalories(
+    @Request() req,
+  ): Promise<{ averageCalories: number; totalMeals: number }> {
+    try {
+      console.log('Getting average calories for user:', req.user?.id);
+      const result = await this.mealService.getAverageCalories(req.user);
+      console.log('Average calories result:', result);
+      return result;
+    } catch (error) {
+      console.error('Error in getAverageCalories controller:', error);
+      throw error;
+    }
+  }
+
   @Get('meals/:id')
   @ApiOperation({ summary: 'Get meal by ID' })
   @ApiParam({ name: 'id', type: String })

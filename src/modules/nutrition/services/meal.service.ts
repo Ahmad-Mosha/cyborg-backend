@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { Meal } from '../entities/meal.entity';
 import { MealFood } from '../entities/meal-food.entity';
+import { MealPlan } from '../entities/meal-plan.entity';
 import { Food } from '../../food/entities/food.entity';
 import { User } from '../../users/entities/user.entity';
 import { AddMealDto } from '../dto/add-meal.dto';
@@ -426,5 +427,130 @@ export class MealService {
 
       return newMeals;
     });
+  }
+
+  async getAverageCalories(
+    user: User,
+  ): Promise<{ averageCalories: number; totalMeals: number }> {
+    try {
+      console.log('Starting getAverageCalories for user:', user?.id);
+
+      // First try to get from actual meals
+      const meals = await this.mealRepository.find({
+        where: {
+          mealPlan: {
+            user: { id: user.id },
+          },
+        },
+        relations: ['mealPlan', 'mealPlan.user'],
+      });
+
+      console.log('Found actual meals:', meals.length);
+
+      if (meals.length > 0) {
+        // Filter meals that have calories and calculate average
+        const mealsWithCalories = meals.filter(
+          (meal) =>
+            meal.nutrients &&
+            meal.nutrients.calories &&
+            meal.nutrients.calories > 0,
+        );
+
+        if (mealsWithCalories.length > 0) {
+          const totalCalories = mealsWithCalories.reduce(
+            (sum, meal) => sum + (meal.nutrients.calories || 0),
+            0,
+          );
+          const averageCalories = Math.round(
+            totalCalories / mealsWithCalories.length,
+          );
+
+          console.log(
+            'Using actual meals - Average:',
+            averageCalories,
+            'from',
+            mealsWithCalories.length,
+            'meals',
+          );
+          return {
+            averageCalories,
+            totalMeals: mealsWithCalories.length,
+          };
+        }
+      }
+
+      // If no actual meals with calories, try meal plans
+      console.log('No actual meals found, trying meal plans...');
+      return this.getAverageCaloriesFromMealPlans(user);
+    } catch (error) {
+      console.error('Error calculating average calories:', error);
+      return {
+        averageCalories: 0,
+        totalMeals: 0,
+      };
+    }
+  }
+
+  async getAverageCaloriesFromMealPlans(
+    user: User,
+  ): Promise<{ averageCalories: number; totalMeals: number }> {
+    try {
+      console.log(
+        'Getting average calories from meal plans for user:',
+        user?.id,
+      );
+
+      const mealPlans = await this.dataSource.getRepository(MealPlan).find({
+        where: { user: { id: user.id } },
+      });
+
+      console.log('Found meal plans:', mealPlans.length);
+
+      if (mealPlans.length === 0) {
+        return { averageCalories: 0, totalMeals: 0 };
+      }
+
+      let totalCalories = 0;
+      let totalMealCount = 0;
+
+      mealPlans.forEach((plan) => {
+        if (
+          plan.calorieDistribution &&
+          Array.isArray(plan.calorieDistribution)
+        ) {
+          plan.calorieDistribution.forEach((meal) => {
+            if (meal.calorieAmount && meal.calorieAmount > 0) {
+              totalCalories += meal.calorieAmount;
+              totalMealCount++;
+            }
+          });
+        }
+      });
+
+      if (totalMealCount === 0) {
+        return { averageCalories: 0, totalMeals: 0 };
+      }
+
+      const averageCalories = Math.round(totalCalories / totalMealCount);
+
+      console.log(
+        'Calculated average from meal plans:',
+        averageCalories,
+        'from',
+        totalMealCount,
+        'planned meals',
+      );
+
+      return {
+        averageCalories,
+        totalMeals: totalMealCount,
+      };
+    } catch (error) {
+      console.error(
+        'Error calculating average calories from meal plans:',
+        error,
+      );
+      return { averageCalories: 0, totalMeals: 0 };
+    }
   }
 }
