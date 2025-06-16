@@ -1,10 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
 import { UpdateProfileDto } from '../dto/update-profile.dto';
+import { ChangePasswordDto } from '../dto/change-password.dto';
 import { UploadService } from '../../upload/upload.service';
 import { ProfilePictureDto } from '../dto/profile-picture.dto';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UserProfileService {
@@ -105,5 +112,60 @@ export class UserProfileService {
     user.profilePictureKey = null;
 
     return this.userRepository.save(user);
+  }
+
+  private async findOneWithPassword(userId: string): Promise<User> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      select: ['id', 'email', 'password'], // Include password for validation
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    return user;
+  }
+
+  async changePassword(
+    userId: string,
+    changePasswordDto: ChangePasswordDto,
+  ): Promise<{ message: string }> {
+    const { currentPassword, newPassword, confirmPassword } = changePasswordDto;
+
+    // Validate password confirmation
+    if (newPassword !== confirmPassword) {
+      throw new BadRequestException(
+        'New password and confirmation do not match',
+      );
+    }
+
+    // Find user with password
+    const user = await this.findOneWithPassword(userId);
+
+    // Verify current password
+    const isCurrentPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.password,
+    );
+    if (!isCurrentPasswordValid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    // Check if new password is different from current password
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    if (isSamePassword) {
+      throw new BadRequestException(
+        'New password must be different from current password',
+      );
+    }
+
+    // Hash new password
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    await this.userRepository.update(userId, { password: hashedNewPassword });
+
+    return { message: 'Password changed successfully' };
   }
 }

@@ -24,6 +24,7 @@ import {
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { UserProfileService } from '../services/user-profile.service';
 import { UpdateProfileDto } from '../dto/update-profile.dto';
+import { ChangePasswordDto } from '../dto/change-password.dto';
 import { User } from '../entities/user.entity';
 import { ResponseInterceptor } from '@shared/interceptors/response.interceptor';
 import { ProfilePictureDto } from '../dto/profile-picture.dto';
@@ -144,5 +145,43 @@ export class UserProfileController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async deleteProfile(@Request() req): Promise<void> {
     return this.userProfileService.delete(req.user.id);
+  }
+
+  @Put('change-password')
+  @ApiOperation({
+    summary: 'Change password',
+    description:
+      'Change the user password by providing current password and new password',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Password changed successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example: 'Password changed successfully',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Bad request - passwords do not match or other validation errors',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - current password is incorrect',
+  })
+  async changePassword(
+    @Request() req,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ): Promise<{ message: string }> {
+    return this.userProfileService.changePassword(
+      req.user.id,
+      changePasswordDto,
+    );
   }
 }
