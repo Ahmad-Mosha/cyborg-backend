@@ -7,8 +7,11 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
+import { UserData } from '../entities/user-data.entity';
+import { WeightHistory } from '../entities/weight-history.entity';
 import { UpdateProfileDto } from '../dto/update-profile.dto';
 import { ChangePasswordDto } from '../dto/change-password.dto';
+import { UpdateWeightDto } from '../dto/update-weight.dto';
 import { UploadService } from '../../upload/upload.service';
 import { ProfilePictureDto } from '../dto/profile-picture.dto';
 import * as bcrypt from 'bcrypt';
@@ -18,6 +21,10 @@ export class UserProfileService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(UserData)
+    private readonly userDataRepository: Repository<UserData>,
+    @InjectRepository(WeightHistory)
+    private readonly weightHistoryRepository: Repository<WeightHistory>,
     private readonly uploadService: UploadService,
   ) {}
 
@@ -218,5 +225,54 @@ export class UserProfileService {
     await this.userRepository.update(userId, { password: hashedNewPassword });
 
     return { message: 'Password changed successfully' };
+  }
+
+  async updateWeight(
+    userId: string,
+    updateWeightDto: UpdateWeightDto,
+  ): Promise<{ message: string; weightHistory: WeightHistory; currentWeight: number }> {
+    const { weight, note } = updateWeightDto;
+
+    // Find or create user data
+    let userData = await this.userDataRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['user']
+    });
+
+    if (!userData) {
+      // Create new user data if it doesn't exist
+      userData = this.userDataRepository.create({
+        user: { id: userId },
+        weight: weight
+      });
+    } else {
+      // Update existing weight
+      userData.weight = weight;
+    }
+
+    // Save the updated user data
+    await this.userDataRepository.save(userData);
+
+    // Create weight history entry
+    const weightHistory = this.weightHistoryRepository.create({
+      user: { id: userId },
+      weight: weight,
+      note: note || null
+    });
+
+    const savedWeightHistory = await this.weightHistoryRepository.save(weightHistory);
+
+    return {
+      message: 'Weight updated successfully',
+      weightHistory: savedWeightHistory,
+      currentWeight: weight
+    };
+  }
+
+  async getWeightHistory(userId: string): Promise<WeightHistory[]> {
+    return this.weightHistoryRepository.find({
+      where: { user: { id: userId } },
+      order: { recordedAt: 'DESC' }
+    });
   }
 }

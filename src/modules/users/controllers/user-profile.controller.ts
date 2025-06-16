@@ -25,7 +25,9 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { UserProfileService } from '../services/user-profile.service';
 import { UpdateProfileDto } from '../dto/update-profile.dto';
 import { ChangePasswordDto } from '../dto/change-password.dto';
+import { UpdateWeightDto } from '../dto/update-weight.dto';
 import { User } from '../entities/user.entity';
+import { WeightHistory } from '../entities/weight-history.entity';
 import { ResponseInterceptor } from '@shared/interceptors/response.interceptor';
 import { ProfilePictureDto } from '../dto/profile-picture.dto';
 import { FileInterceptor } from '@nestjs/platform-express/multer/interceptors/file.interceptor';
@@ -183,5 +185,55 @@ export class UserProfileController {
       req.user.id,
       changePasswordDto,
     );
+  }
+
+  @Put('weight')
+  @ApiOperation({
+    summary: 'Update user weight',
+    description: 'Updates the user weight and creates a weight history entry for analytics',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Weight updated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example: 'Weight updated successfully',
+        },
+        weightHistory: {
+          type: 'object',
+          description: 'The created weight history entry',
+        },
+        currentWeight: {
+          type: 'number',
+          example: 75.5,
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Bad request - invalid weight data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async updateWeight(
+    @Request() req,
+    @Body() updateWeightDto: UpdateWeightDto,
+  ): Promise<{ message: string; weightHistory: WeightHistory; currentWeight: number }> {
+    return this.userProfileService.updateWeight(req.user.id, updateWeightDto);
+  }
+
+  @Get('weight-history')
+  @ApiOperation({
+    summary: 'Get weight history',
+    description: 'Returns the complete weight history for analytics and tracking',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Weight history retrieved successfully',
+    type: [WeightHistory],
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getWeightHistory(@Request() req): Promise<WeightHistory[]> {
+    return this.userProfileService.getWeightHistory(req.user.id);
   }
 }
