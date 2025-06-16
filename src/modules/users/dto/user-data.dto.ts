@@ -81,16 +81,16 @@ export class UserDataDto {
   @Expose()
   @Transform(({ obj }) => {
     if (!obj.weight || !obj.height || !obj.age || !obj.gender) return null;
-    
+
     // Using Mifflin-St Jeor Formula
     let bmr = 10 * obj.weight + 6.25 * obj.height - 5 * obj.age;
-    
+
     if (obj.gender === Gender.MALE) {
       bmr += 5;
     } else {
       bmr -= 161;
     }
-    
+
     return Math.round(bmr);
   })
   @ApiProperty({
