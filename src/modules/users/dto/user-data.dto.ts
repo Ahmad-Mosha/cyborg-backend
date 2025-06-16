@@ -107,6 +107,71 @@ export class UserDataDto {
   @IsOptional()
   @Min(0)
   @ApiProperty({
+    description: "User's waist measurement in centimeters",
+    example: 85,
+    minimum: 0,
+    required: false,
+    nullable: true,
+    type: Number,
+  })
+  waist?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  @ApiProperty({
+    description: "User's chest measurement in centimeters",
+    example: 95,
+    minimum: 0,
+    required: false,
+    nullable: true,
+    type: Number,
+  })
+  chest?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  @ApiProperty({
+    description: "User's hips measurement in centimeters",
+    example: 90,
+    minimum: 0,
+    required: false,
+    nullable: true,
+    type: Number,
+  })
+  hips?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  @ApiProperty({
+    description: "User's neck measurement in centimeters",
+    example: 38,
+    minimum: 0,
+    required: false,
+    nullable: true,
+    type: Number,
+  })
+  neck?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  @ApiProperty({
+    description: "User's shoulders measurement in centimeters",
+    example: 110,
+    minimum: 0,
+    required: false,
+    nullable: true,
+    type: Number,
+  })
+  shoulders?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  @ApiProperty({
     description: "User's muscle mass percentage",
     example: 40,
     minimum: 0,

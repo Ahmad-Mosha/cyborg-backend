@@ -50,6 +50,21 @@ export class UserData {
   @Column({ type: 'float', nullable: true })
   bmi: number;
 
+  @Column({ type: 'float', nullable: true })
+  waist: number;
+
+  @Column({ type: 'float', nullable: true })
+  chest: number;
+
+  @Column({ type: 'float', nullable: true })
+  hips: number;
+
+  @Column({ type: 'float', nullable: true })
+  neck: number;
+
+  @Column({ type: 'float', nullable: true })
+  shoulders: number;
+
   @Column({ type: 'text', nullable: true })
   workoutLocation: string;
 
