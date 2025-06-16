@@ -30,6 +30,7 @@ export class UserProfileService {
         'lastName',
         'email',
         'profilePictureUrl',
+        'profilePictureKey',
         'createdAt',
         'updatedAt',
       ],
@@ -94,24 +95,74 @@ export class UserProfileService {
   async deleteProfilePicture(userId: string): Promise<User> {
     const user = await this.findOne(userId);
 
-    // If no profile picture exists, return the user as-is (already has null values)
-    if (!user.profilePictureKey) {
+    console.log('User profile picture data:', {
+      userId,
+      hasUrl: !!user.profilePictureUrl,
+      hasKey: !!user.profilePictureKey,
+      url: user.profilePictureUrl,
+      key: user.profilePictureKey,
+    });
+
+    // If no profile picture exists at all, return the user as-is
+    if (!user.profilePictureUrl && !user.profilePictureKey) {
+      console.log('No profile picture found for user:', userId);
       return user;
     }
 
-    try {
-      // Delete the profile picture from storage
-      await this.uploadService.deleteFile(user.profilePictureKey);
-    } catch (error) {
-      console.error('Error deleting profile picture from storage:', error);
-      // Continue with database cleanup even if storage deletion fails
+    // If we have a key, try to delete from storage
+    if (user.profilePictureKey) {
+      console.log(
+        'Attempting to delete profile picture with key:',
+        user.profilePictureKey,
+      );
+
+      try {
+        // Delete the profile picture from storage
+        const deleteResult = await this.uploadService.deleteFile(
+          user.profilePictureKey,
+        );
+
+        if (deleteResult) {
+          console.log('Profile picture deleted from storage successfully');
+        } else {
+          console.warn(
+            'Profile picture deletion from storage failed, but continuing with database cleanup',
+          );
+        }
+      } catch (error) {
+        console.error('Error details when deleting from storage:', {
+          key: user.profilePictureKey,
+          error: error.message,
+          stack: error.stack,
+        });
+
+        // For debugging - log AWS configuration
+        console.log('AWS Config:', {
+          region: process.env.AWS_REGION,
+          bucket: process.env.AWS_BUCKET_NAME,
+          hasAccessKey: !!process.env.AWS_ACCESS_KEY_ID,
+          hasSecretKey: !!process.env.AWS_SECRET_ACCESS_KEY,
+        });
+
+        // Continue with database cleanup even if storage deletion fails
+        console.log(
+          'Continuing with database cleanup despite storage deletion failure',
+        );
+      }
+    } else {
+      console.log(
+        'No profile picture key found, but URL exists. Cleaning up database only.',
+      );
     }
 
-    // Update user profile
+    // Update user profile (clean up both URL and key)
     user.profilePictureUrl = null;
     user.profilePictureKey = null;
 
-    return this.userRepository.save(user);
+    const savedUser = await this.userRepository.save(user);
+    console.log('User profile updated in database, picture references removed');
+
+    return savedUser;
   }
 
   private async findOneWithPassword(userId: string): Promise<User> {

@@ -1,5 +1,9 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { S3Client, PutObjectCommand, DeleteObjectCommand,  } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} from '@aws-sdk/client-s3';
 import { v4 as uuidv4 } from 'uuid';
 import { FILE_CONSTANTS } from '../../shared/constants/file.constants';
 
@@ -18,7 +22,7 @@ export class UploadService {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
       },
-      maxAttempts: 3, 
+      maxAttempts: 3,
     });
     this.bucket = process.env.AWS_BUCKET_NAME;
   }
@@ -79,32 +83,48 @@ export class UploadService {
 
   async deleteFile(key: string): Promise<boolean> {
     try {
+      console.log('Attempting to delete file from S3:', {
+        bucket: this.bucket,
+        key: key,
+        region: process.env.AWS_REGION,
+      });
+
       const command = new DeleteObjectCommand({
         Bucket: this.bucket,
         Key: key,
       });
 
-      await this.s3Client.send(command);
+      const result = await this.s3Client.send(command);
+      console.log('S3 delete operation completed:', result);
+
       return true;
     } catch (error) {
-      console.error('Delete error:', error);
-      throw new BadRequestException(`Delete failed: ${error.message}`);
+      console.error('S3 Delete error details:', {
+        bucket: this.bucket,
+        key: key,
+        errorName: error.name,
+        errorMessage: error.message,
+        errorCode: error.Code,
+        statusCode: error.$metadata?.httpStatusCode,
+      });
+
+      // Don't throw exception, just return false to indicate failure
+      // This allows the calling code to decide how to handle it
+      return false;
     }
   }
 
   /**
    * To DO -> getSignedUrl
-   * @param key 
-   * @param expiresIn 
-   * @returns 
+   * @param key
+   * @param expiresIn
+   * @returns
    */
 
   /**
    * To DO -> getFileInfo
-   * @param key 
-   * @param expiresIn 
-   * @returns 
+   * @param key
+   * @param expiresIn
+   * @returns
    */
-
-  
-} 
+}
