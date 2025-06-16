@@ -230,20 +230,24 @@ export class UserProfileService {
   async updateWeight(
     userId: string,
     updateWeightDto: UpdateWeightDto,
-  ): Promise<{ message: string; weightHistory: WeightHistory; currentWeight: number }> {
+  ): Promise<{
+    message: string;
+    weightHistory: WeightHistory;
+    currentWeight: number;
+  }> {
     const { weight, note } = updateWeightDto;
 
     // Find or create user data
     let userData = await this.userDataRepository.findOne({
       where: { user: { id: userId } },
-      relations: ['user']
+      relations: ['user'],
     });
 
     if (!userData) {
       // Create new user data if it doesn't exist
       userData = this.userDataRepository.create({
         user: { id: userId },
-        weight: weight
+        weight: weight,
       });
     } else {
       // Update existing weight
@@ -257,22 +261,23 @@ export class UserProfileService {
     const weightHistory = this.weightHistoryRepository.create({
       user: { id: userId },
       weight: weight,
-      note: note || null
+      note: note || null,
     });
 
-    const savedWeightHistory = await this.weightHistoryRepository.save(weightHistory);
+    const savedWeightHistory =
+      await this.weightHistoryRepository.save(weightHistory);
 
     return {
       message: 'Weight updated successfully',
       weightHistory: savedWeightHistory,
-      currentWeight: weight
+      currentWeight: weight,
     };
   }
 
   async getWeightHistory(userId: string): Promise<WeightHistory[]> {
     return this.weightHistoryRepository.find({
       where: { user: { id: userId } },
-      order: { recordedAt: 'DESC' }
+      order: { recordedAt: 'DESC' },
     });
   }
 }

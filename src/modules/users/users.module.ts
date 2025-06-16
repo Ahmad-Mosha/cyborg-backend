@@ -13,9 +13,12 @@ import { UploadModule } from '@modules/upload/upload.module';
 import { UploadService } from '@modules/upload/upload.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, UserData, WeightHistory]), UploadModule],
+  imports: [
+    TypeOrmModule.forFeature([User, UserData, WeightHistory]),
+    UploadModule,
+  ],
   controllers: [UsersController, UserDataController, UserProfileController],
   providers: [UsersService, UserDataService, UserProfileService, UploadService],
-  exports: [UsersService , UserDataService, UserProfileService, ],
+  exports: [UsersService, UserDataService, UserProfileService],
 })
 export class UsersModule {}

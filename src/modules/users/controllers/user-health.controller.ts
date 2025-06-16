@@ -1,4 +1,12 @@
-import { Controller, Get, Put, Post, Body, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Put,
+  Post,
+  Body,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiTags,
@@ -7,16 +15,22 @@ import {
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { UserDataService } from '../services/user-health.service';
+import { UserProfileService } from '../services/user-profile.service';
 import { UserData } from '../entities/user-data.entity';
+import { WeightHistory } from '../entities/weight-history.entity';
 import { GetUser } from '../../../shared/decorators/get-user.decorator';
 import { UserDataDto } from '../dto/user-data.dto';
+import { UpdateWeightDto } from '../dto/update-weight.dto';
 
 @Controller('user-data')
 @ApiTags('User Data')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 export class UserDataController {
-  constructor(private readonly userDataService: UserDataService) {}
+  constructor(
+    private readonly userDataService: UserDataService,
+    private readonly userProfileService: UserProfileService,
+  ) {}
 
   @Get()
   @ApiOperation({
@@ -70,5 +84,64 @@ export class UserDataController {
     @Body() userDataDto: UserDataDto,
   ): Promise<UserData> {
     return this.userDataService.update(user.id, userDataDto);
+  }
+
+  @Put('weight')
+  @ApiOperation({
+    summary: 'Update user weight',
+    description:
+      'Updates the user weight and creates a weight history entry for analytics',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Weight updated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example: 'Weight updated successfully',
+        },
+        weightHistory: {
+          type: 'object',
+          description: 'The created weight history entry',
+        },
+        currentWeight: {
+          type: 'number',
+          example: 75.5,
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - invalid weight data',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async updateWeight(
+    @Request() req,
+    @Body() updateWeightDto: UpdateWeightDto,
+  ): Promise<{
+    message: string;
+    weightHistory: WeightHistory;
+    currentWeight: number;
+  }> {
+    return this.userProfileService.updateWeight(req.user.id, updateWeightDto);
+  }
+
+  @Get('weight-history')
+  @ApiOperation({
+    summary: 'Get weight history',
+    description:
+      'Returns the complete weight history for analytics and tracking',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Weight history retrieved successfully',
+    type: [WeightHistory],
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getWeightHistory(@Request() req): Promise<WeightHistory[]> {
+    return this.userProfileService.getWeightHistory(req.user.id);
   }
 }
