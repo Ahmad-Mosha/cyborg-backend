@@ -57,7 +57,7 @@ export class UserProfileService {
     file: Express.Multer.File,
   ): Promise<ProfilePictureDto> {
     const user = await this.findOne(userId);
-    
+
     // If user already has a profile picture, delete the old one
     if (user.profilePictureKey) {
       try {
@@ -70,7 +70,7 @@ export class UserProfileService {
 
     // Upload the new profile picture
     const uploadResult = await this.uploadService.uploadFile(file);
-    
+
     // Update user profile with the new picture information
     user.profilePictureUrl = uploadResult.url;
     user.profilePictureKey = uploadResult.key;
@@ -86,18 +86,24 @@ export class UserProfileService {
 
   async deleteProfilePicture(userId: string): Promise<User> {
     const user = await this.findOne(userId);
-    
+
+    // If no profile picture exists, return the user as-is (already has null values)
     if (!user.profilePictureKey) {
-      throw new NotFoundException('Profile picture not found');
+      return user;
     }
 
-    // Delete the profile picture from storage
-    await this.uploadService.deleteFile(user.profilePictureKey);
-    
+    try {
+      // Delete the profile picture from storage
+      await this.uploadService.deleteFile(user.profilePictureKey);
+    } catch (error) {
+      console.error('Error deleting profile picture from storage:', error);
+      // Continue with database cleanup even if storage deletion fails
+    }
+
     // Update user profile
     user.profilePictureUrl = null;
     user.profilePictureKey = null;
-    
+
     return this.userRepository.save(user);
   }
 }
