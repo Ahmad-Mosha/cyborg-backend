@@ -15,6 +15,8 @@ import { User } from '../../users/entities/user.entity';
 import { AddMealDto } from '../dto/add-meal.dto';
 import { UpdateMealDto } from '../dto/update-meal.dto';
 import { AddFoodToMealDto } from '../dto/add-food-to-meal.dto';
+import { SearchAndAddFoodDto } from '../dto/search-and-add-food.dto';
+import { AddCustomFoodDto } from '../dto/add-custom-food.dto';
 import { FoodService } from '../../food/food.service';
 import { NutritionCalculatorService } from './nutrition-calculator.service';
 import { MealPlanService } from './meal-plan.service';
@@ -551,6 +553,318 @@ export class MealService {
         error,
       );
       return { averageCalories: 0, totalMeals: 0 };
+    }
+  }
+  async addFoodFromSearch(
+    mealId: string,
+    dto: {
+      foodId: string;
+      quantity: number;
+      unit?: string;
+      foodName?: string;
+      isExternalApi?: boolean;
+    },
+    user: User,
+  ): Promise<MealFood> {
+    return await this.dataSource.transaction(async (manager) => {
+      // Check if meal exists and belongs to user
+      const meal = await this.getMealById(mealId, user);
+
+      let foodData: Food;
+
+      if (dto.isExternalApi !== false) {
+        // Get food data from external API and save it to our database
+        try {
+          // Check if we already have this food in our database
+          let existingFood = await this.foodRepository.findOne({
+            where: { usdaId: dto.foodId },
+          });
+
+          if (!existingFood) {
+            // Get food details from API and save to database
+            const apiFood = await this.foodService.getFoodDetails(dto.foodId);
+            foodData = await this.foodService.addToFavorites(apiFood, user);
+          } else {
+            foodData = existingFood;
+          }
+        } catch (error) {
+          throw new HttpException(
+            'Failed to fetch food data from external API',
+            HttpStatus.BAD_REQUEST,
+          );
+        }
+      } else {
+        // Use existing food from our database
+        foodData = await this.foodRepository.findOne({
+          where: { id: dto.foodId },
+        });
+
+        if (!foodData) {
+          throw new HttpException('Food not found', HttpStatus.NOT_FOUND);
+        }
+      }
+
+      // Calculate nutrients based on serving size
+      const nutrients = this.nutritionCalculator.calculateNutrients(
+        foodData,
+        dto.quantity,
+      );
+
+      // Create the meal food relationship
+      const mealFood = manager.create(MealFood, {
+        meal: { id: meal.id },
+        food: { id: foodData.id },
+        servingSize: dto.quantity,
+        servingUnit: dto.unit || foodData.servingUnit || 'g',
+        nutrients,
+      });
+
+      await manager.save(mealFood);
+
+      // Retrieve the full object with relations
+      const savedMealFood = await manager.findOne(MealFood, {
+        where: { id: mealFood.id },
+        relations: ['meal', 'food'],
+      });
+
+      // Update meal nutrition totals
+      await this.recalculateMealNutrition(meal);
+
+      // Synchronize meal plan calorie distribution if we have a meal plan ID
+      const mealPlanId = meal.mealPlan?.id;
+      if (mealPlanId) {
+        await this.mealPlanService.synchronizeCalorieDistribution(
+          mealPlanId,
+          user,
+        );
+      }
+
+      return savedMealFood;
+    });
+  }
+
+  async addCustomFoodToMeal(
+    mealId: string,
+    dto: {
+      name: string;
+      calories: number;
+      quantity: number;
+      unit?: string;
+      protein: number;
+      carbs: number;
+      fat: number;
+    },
+    user: User,
+  ): Promise<MealFood> {
+    return await this.dataSource.transaction(async (manager) => {
+      // Check if meal exists and belongs to user
+      const meal = await this.getMealById(mealId, user);
+
+      // Create custom food
+      const customFood = manager.create(Food, {
+        name: dto.name,
+        calories: dto.calories,
+        protein: dto.protein,
+        carbohydrates: dto.carbs,
+        fat: dto.fat,
+        servingSize: dto.quantity,
+        servingUnit: dto.unit || 'serving',
+        isCustom: true,
+        user: user,
+      });
+
+      await manager.save(customFood);
+
+      // Calculate nutrients for the serving
+      const nutrients = {
+        calories: dto.calories,
+        protein: dto.protein,
+        carbohydrates: dto.carbs,
+        fat: dto.fat,
+        fiber: 0,
+        sugar: 0,
+        sodium: 0,
+        cholesterol: 0,
+      };
+
+      // Create the meal food relationship
+      const mealFood = manager.create(MealFood, {
+        meal: { id: meal.id },
+        food: { id: customFood.id },
+        servingSize: dto.quantity,
+        servingUnit: dto.unit || 'serving',
+        nutrients,
+      });
+
+      await manager.save(mealFood);
+
+      // Retrieve the full object with relations
+      const savedMealFood = await manager.findOne(MealFood, {
+        where: { id: mealFood.id },
+        relations: ['meal', 'food'],
+      });
+
+      // Update meal nutrition totals
+      await this.recalculateMealNutrition(meal);
+
+      // Synchronize meal plan calorie distribution if we have a meal plan ID
+      const mealPlanId = meal.mealPlan?.id;
+      if (mealPlanId) {
+        await this.mealPlanService.synchronizeCalorieDistribution(
+          mealPlanId,
+          user,
+        );
+      }
+
+      return savedMealFood;
+    });
+  }
+
+  async addFoodFromSearchOptimized(
+    mealId: string,
+    dto: {
+      foodId: string;
+      quantity: number;
+      unit?: string;
+      foodData?: {
+        name: string;
+        calories: number;
+        protein: number;
+        carbohydrates: number;
+        fat: number;
+        fiber?: number;
+        sugar?: number;
+        sodium?: number;
+      };
+    },
+    user: User,
+  ): Promise<MealFood> {
+    return await this.dataSource.transaction(async (manager) => {
+      // Check if meal exists and belongs to user
+      const meal = await this.getMealById(mealId, user);
+
+      let foodData: Food;
+
+      // Check if we already have this food in our database
+      let existingFood = await this.foodRepository.findOne({
+        where: { usdaId: dto.foodId },
+      });
+
+      if (existingFood) {
+        foodData = existingFood;
+      } else {
+        // Create food record directly from provided data (no API call needed)
+        if (dto.foodData) {
+          const newFood = manager.create(Food, {
+            name: dto.foodData.name,
+            usdaId: dto.foodId,
+            calories: dto.foodData.calories,
+            protein: dto.foodData.protein,
+            carbohydrates: dto.foodData.carbohydrates,
+            fat: dto.foodData.fat,
+            fiber: dto.foodData.fiber || 0,
+            sugar: dto.foodData.sugar || 0,
+            sodium: dto.foodData.sodium || 0,
+            servingSize: 100,
+            servingUnit: 'g',
+            isCustom: false,
+            user: user,
+          });
+
+          foodData = await manager.save(newFood);
+        } else {
+          // Fallback to API call if no data provided
+          try {
+            const apiFood = await this.foodService.getFoodDetails(dto.foodId);
+            foodData = await this.foodService.addToFavorites(apiFood, user);
+          } catch (error) {
+            throw new HttpException(
+              'Failed to fetch food data from external API',
+              HttpStatus.BAD_REQUEST,
+            );
+          }
+        }
+      }
+
+      // Calculate nutrients based on serving size
+      const nutrients = this.nutritionCalculator.calculateNutrients(
+        foodData,
+        dto.quantity,
+      );
+
+      // Create the meal food relationship
+      const mealFood = manager.create(MealFood, {
+        meal: { id: meal.id },
+        food: { id: foodData.id },
+        servingSize: dto.quantity,
+        servingUnit: dto.unit || foodData.servingUnit || 'g',
+        nutrients,
+      });
+
+      await manager.save(mealFood);
+
+      // Retrieve the full object with relations
+      const savedMealFood = await manager.findOne(MealFood, {
+        where: { id: mealFood.id },
+        relations: ['meal', 'food'],
+      });
+
+      // Update meal nutrition totals
+      await this.recalculateMealNutrition(meal);
+
+      // Synchronize meal plan calorie distribution if we have a meal plan ID
+      const mealPlanId = meal.mealPlan?.id;
+      if (mealPlanId) {
+        await this.mealPlanService.synchronizeCalorieDistribution(
+          mealPlanId,
+          user,
+        );
+      }
+
+      return savedMealFood;
+    });
+  }
+
+  async removeFoodFromMealByMealFoodId(
+    mealFoodId: string,
+    user: User,
+  ): Promise<void> {
+    // Find the meal food relationship and check if it belongs to the user
+    const mealFood = await this.mealFoodRepository.findOne({
+      where: { id: mealFoodId },
+      relations: ['meal', 'meal.mealPlan', 'meal.mealPlan.user'],
+    });
+
+    if (!mealFood) {
+      throw new HttpException(
+        'Food item not found in meal',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    // Check if the meal belongs to the user
+    if (mealFood.meal.mealPlan.user.id !== user.id) {
+      throw new HttpException(
+        'Unauthorized to remove this food item',
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
+    // Store meal plan ID for synchronization
+    const mealPlanId = mealFood.meal.mealPlan?.id;
+
+    // Delete the meal-food relationship
+    await this.mealFoodRepository.remove(mealFood);
+
+    // Recalculate meal nutrition
+    await this.recalculateMealNutrition(mealFood.meal);
+
+    // Synchronize calorie distribution with meals
+    if (mealPlanId) {
+      await this.mealPlanService.synchronizeCalorieDistribution(
+        mealPlanId,
+        user,
+      );
     }
   }
 }
